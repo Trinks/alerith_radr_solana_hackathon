@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdraw from Shielded Pool</title>
+    <link rel="stylesheet" href="/test/css/common.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Withdraw from Shielded Pool</h1>
+
+        <!-- Step 1: Connect Wallet -->
+        <div class="card" id="step1Card">
+            <div class="step-indicator">
+                <div class="step-dot active" id="step1Dot">1</div>
+                <div class="step-label">Connect Wallet</div>
+            </div>
+            <div id="walletButtons" class="wallet-buttons"></div>
+            <div id="walletConnected" class="connected" style="display: none;"></div>
+            <div id="noWalletMsg" style="display: none; color: #9ca3af; margin-top: 10px; font-size: 13px;">
+                No wallet detected. Install <a href="https://phantom.app" target="_blank">Phantom</a> or <a href="https://solflare.com" target="_blank">Solflare</a>
+            </div>
+        </div>
+
+        <!-- Step 2: Initialize & Auth -->
+        <div class="card" id="step2Card" style="display: none;">
+            <div class="step-indicator">
+                <div class="step-dot" id="step2Dot">2</div>
+                <div class="step-label">Initialize ShadowWire</div>
+            </div>
+            <button id="initBtn" onclick="initAndAuth()">Initialize & Authenticate</button>
+            <div id="initStatus"></div>
+        </div>
+
+        <!-- Step 3: Withdraw -->
+        <div class="card" id="step3Card" style="display: none;">
+            <div class="step-indicator">
+                <div class="step-dot" id="step3Dot">3</div>
+                <div class="step-label">Withdraw</div>
+            </div>
+            <div class="amount-row">
+                <label>Token</label>
+                <select id="tokenSelect" onchange="handleTokenChange()">
+                    <option value="SOL">SOL</option>
+                    <option value="USD1">USD1</option>
+                    <option value="RADR">RADR</option>
+                </select>
+            </div>
+            <div class="balance-info" id="balanceInfo">Loading balance...</div>
+            <div class="amount-row" style="margin-top: 15px;">
+                <label>Amount to Withdraw (<span id="tokenLabel">SOL</span>) - min: <span id="minLabel">0.1</span></label>
+                <input type="number" id="withdrawAmount" value="0.1" min="0.1" step="0.01" placeholder="0.1">
+            </div>
+            <button class="secondary" id="withdrawBtn" onclick="doWithdraw()">Withdraw from Shielded Pool</button>
+            <div id="withdrawStatus"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js"></script>
+    <script src="/test/shadowwire-browser.js"></script>
+    <script src="/test/js/common.js"></script>
+    <script>
+        let wasmInitialized = false;
+        let shieldedBalance = 0;
+
+        function handleTokenChange() {
+            onTokenChange('tokenSelect', { onTokenChange: () => updateBalance() });
+        }
+
+        function updateBalance() {
+            if (walletAddress) {
+                fetchBalance(walletAddress, (balance) => {
+                    shieldedBalance = balance;
+                    const display = fromSmallestUnit(balance).toFixed(6);
+                    document.getElementById('balanceInfo').textContent = `Available: ${display} ${selectedToken}`;
+                    document.getElementById('withdrawAmount').max = fromSmallestUnit(balance);
+                });
+            }
+        }
+
+        function onWalletConnected(address, provider) {
+            document.getElementById('step1Dot').classList.add('done');
+            document.getElementById('step2Card').style.display = 'block';
+            document.getElementById('step2Dot').classList.add('active');
+        }
+
+        async function initAndAuth() {
+            try {
+                document.getElementById('initBtn').disabled = true;
+                showStatus('initStatus', 'Initializing ShadowWire SDK...', 'info');
+
+                if (typeof ShadowWire === 'undefined') throw new Error('ShadowWire SDK not loaded');
+                if (!ShadowWire.isWASMSupported()) throw new Error('WebAssembly not supported');
+
+                await ShadowWire.initWASM('/wasm/settler_wasm_bg.wasm');
+                wasmInitialized = true;
+
+                showStatus('initStatus', 'Please sign the authentication message...', 'info');
+
+                const message = `Authenticate with ShadowWire\nWallet: ${walletAddress}\nTimestamp: ${Date.now()}`;
+                const encodedMessage = new TextEncoder().encode(message);
+                const signatureResponse = await connectedProvider.wallet.signMessage(encodedMessage);
+                const signature = btoa(String.fromCharCode(...signatureResponse.signature));
+
+                window.walletAuth = { wallet: walletAddress, signature, message };
+
+                showStatus('initStatus', 'Ready to withdraw!', 'success');
+                document.getElementById('step2Dot').classList.remove('active');
+                document.getElementById('step2Dot').classList.add('done');
+                document.getElementById('step3Card').style.display = 'block';
+                document.getElementById('step3Dot').classList.add('active');
+
+                updateBalance();
+            } catch (error) {
+                showStatus('initStatus', `Error: ${error.message}`, 'error');
+                document.getElementById('initBtn').disabled = false;
+            }
+        }
+
+        async function doWithdraw() {
+            try {
+                const amount = parseFloat(document.getElementById('withdrawAmount').value);
+                if (amount < getMinimum()) throw new Error(`Minimum withdrawal is ${getMinimumFormatted()} ${selectedToken}`);
+
+                const amountSmallestUnit = toSmallestUnit(amount);
+                if (amountSmallestUnit > shieldedBalance) throw new Error(`Insufficient balance. Have ${fromSmallestUnit(shieldedBalance).toFixed(6)} ${selectedToken}`);
+
+                document.getElementById('withdrawBtn').disabled = true;
+                showStatus('withdrawStatus', 'Creating withdrawal transaction...', 'info');
+
+                const response = await fetch(`${SHADOWPAY_API}/api/pool/withdraw`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wallet: walletAddress, amount: amountSmallestUnit, token: selectedToken, token_mint: getTokenMint() })
+                });
+
+                const result = await response.json();
+                if (result.error) throw new Error(result.error);
+
+                const txBase64 = result.transaction || result.unsigned_tx_base64;
+                if (!txBase64) throw new Error('No transaction returned');
+
+                showStatus('withdrawStatus', 'Please approve the transaction in your wallet...', 'info');
+
+                const txBytes = Uint8Array.from(atob(txBase64), c => c.charCodeAt(0));
+                const isVersioned = txBytes[0] >= 0x80;
+                let signedTxBase64;
+
+                if (isVersioned) {
+                    const vTx = solanaWeb3.VersionedTransaction.deserialize(txBytes);
+                    vTx.message.recentBlockhash = result.recent_blockhash;
+                    const signedVTx = await connectedProvider.wallet.signTransaction(vTx);
+                    signedTxBase64 = btoa(String.fromCharCode(...signedVTx.serialize()));
+                } else {
+                    const numSigs = txBytes[0];
+                    const msgStart = 1 + numSigs * 64;
+                    const msgBytes = new Uint8Array(txBytes.slice(msgStart));
+                    let offset = 3;
+                    const numAccounts = msgBytes[offset];
+                    offset += 1 + numAccounts * 32;
+                    const newBh = solanaWeb3.bs58.decode(result.recent_blockhash);
+                    msgBytes.set(newBh, offset);
+                    const msg = solanaWeb3.Message.from(msgBytes);
+                    const tx = solanaWeb3.Transaction.populate(msg, []);
+                    const signedTx = await connectedProvider.wallet.signTransaction(tx);
+                    signedTxBase64 = btoa(String.fromCharCode(...signedTx.serialize()));
+                }
+
+                showStatus('withdrawStatus', 'Sending transaction...', 'info');
+
+                const rpcResponse = await fetch(`${SIDECAR_BASE}/rpc/send-transaction`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transaction: signedTxBase64, options: { skipPreflight: false, preflightCommitment: 'confirmed' } })
+                });
+
+                const rpcResult = await rpcResponse.json();
+                if (!rpcResult.success) throw new Error(rpcResult.error || 'Transaction failed');
+
+                showStatus('withdrawStatus', `
+                    <strong>Withdrawal Successful!</strong><br>
+                    <a href="https://solscan.io/tx/${rpcResult.signature}" target="_blank">View on Solscan</a>
+                `, 'success');
+
+                document.getElementById('step3Dot').classList.remove('active');
+                document.getElementById('step3Dot').classList.add('done');
+
+                setTimeout(updateBalance, 5000);
+                document.getElementById('withdrawBtn').disabled = false;
+            } catch (error) {
+                showStatus('withdrawStatus', `Error: ${error.message}`, 'error');
+                document.getElementById('withdrawBtn').disabled = false;
+            }
+        }
+
+        window.onload = () => detectWallets('walletButtons', onWalletConnected);
+    </script>
+</body>
+</html>

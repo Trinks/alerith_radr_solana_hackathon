@@ -1,0 +1,47 @@
+{
+  "name": "alerith-shadowwire-sidecar",
+  "version": "1.0.0",
+  "description": "Privacy-preserving duel escrow sidecar using ShadowWire ZK transfers",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && npm run copy-wasm",
+    "copy-wasm": "node -e \"const fs=require('fs');const p=require('path');const src='src/wasm/settler-wasm-loader.mjs';const dst='dist/wasm/settler-wasm-loader.mjs';fs.mkdirSync(p.dirname(dst),{recursive:true});fs.copyFileSync(src,dst);console.log('Copied',src,'to',dst);\"",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "setup:devnet": "tsx scripts/setup-devnet.ts",
+    "test:shadowwire": "tsx scripts/test-shadowwire.ts",
+    "simulate:duel": "tsx scripts/simulate-duel.ts",
+    "build:browser-sdk": "node scripts/bundle-browser-sdk.js"
+  },
+  "dependencies": {
+    "@radr/shadowwire": "^1.1.15",
+    "@solana/web3.js": "^1.93.0",
+    "bs58": "^5.0.0",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.3.2",
+    "tweetnacl": "^1.0.3",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/bs58": "^4.0.4",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "@types/supertest": "^6.0.2",
+    "@vitest/coverage-v8": "^1.2.0",
+    "dotenv": "^16.3.1",
+    "supertest": "^6.3.3",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

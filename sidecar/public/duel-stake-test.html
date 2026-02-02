@@ -1,0 +1,2247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerith Duel Stake - ZK Proof</title>
+    <!-- Error handler for debugging -->
+    <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('Global error:', msg, 'at', url, lineNo, columnNo);
+            var logEl = document.getElementById('logContainer');
+            if (logEl) logEl.innerHTML += '<div style="color:red;">[ERROR] ' + msg + '</div>';
+            return false;
+        };
+        // Placeholder functions until real ones load
+        function connectWallet() { alert('Scripts still loading, please wait...'); }
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: #121212;
+            color: #e0e0e0;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+        }
+        .card {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #e0e0e0;
+            font-size: 1.2em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .step-number {
+            background: #374151;
+            color: #e0e0e0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .step-number.done {
+            background: #16a34a;
+        }
+        .step-number.error {
+            background: #dc2626;
+        }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        button:hover:not(:disabled) {
+            background: #1d4ed8;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        button.secondary {
+            background: #4b5563;
+        }
+        button.secondary:hover:not(:disabled) {
+            background: #374151;
+        }
+        input {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 150px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #666;
+        }
+        select {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        select option {
+            background: #2a2a2a;
+            color: #e0e0e0;
+        }
+        .status {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .status.info {
+            background: #1e3a5f;
+            border: 1px solid #2563eb;
+        }
+        .status.success {
+            background: #14532d;
+            border: 1px solid #16a34a;
+        }
+        .status.error {
+            background: #450a0a;
+            border: 1px solid #dc2626;
+        }
+        .status.warning {
+            background: #422006;
+            border: 1px solid #d97706;
+        }
+        .log-container {
+            background: #0a0a0a;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #444;
+            padding-left: 10px;
+        }
+        .log-entry.info { border-color: #6b7280; }
+        .log-entry.success { border-color: #16a34a; }
+        .log-entry.error { border-color: #dc2626; }
+        .log-entry .timestamp {
+            color: #666;
+            margin-right: 10px;
+        }
+        .wallet-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .wallet-info .label {
+            color: #888;
+        }
+        .wallet-info .value {
+            color: #4ade80;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .balance-display {
+            font-size: 24px;
+            color: #4ade80;
+            font-weight: bold;
+        }
+        .duel-simulation {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .players-row {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: center;
+            text-align: center;
+        }
+        .player-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .vs {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ef4444;
+        }
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #888;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+        .tab-btn.active {
+            background: #2563eb;
+            color: white;
+            border-color: #60a5fa;
+        }
+        .tab-content {
+            padding: 15px 0;
+        }
+        .copy-box {
+            background: #0a0a15;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .copy-box code {
+            flex: 1;
+            color: #4ade80;
+            word-break: break-all;
+            font-size: 14px;
+        }
+        .copy-box button {
+            flex-shrink: 0;
+        }
+        /* Floating balance panel */
+        .balance-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(107, 114, 128, 0.5);
+            border-radius: 12px;
+            padding: 15px 20px;
+            min-width: 220px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        .balance-panel h3 {
+            margin: 0 0 12px 0;
+            color: #60a5fa;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .balance-panel .balance-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .balance-panel .balance-row:last-child {
+            border-bottom: none;
+        }
+        .balance-panel .balance-label {
+            color: #888;
+            font-size: 12px;
+        }
+        .balance-panel .balance-value {
+            color: #4ade80;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .balance-panel .balance-value.loading {
+            color: #666;
+        }
+        .balance-panel .refresh-btn {
+            background: transparent;
+            border: 1px solid rgba(107, 114, 128, 0.3);
+            color: #60a5fa;
+            padding: 4px 8px;
+            font-size: 11px;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .balance-panel .refresh-btn:hover {
+            background: rgba(107, 114, 128, 0.1);
+        }
+        .balance-panel .wallet-display {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating Balance Panel -->
+    <div class="balance-panel" id="balancePanel" style="display: none;">
+        <h3>💰 Balances</h3>
+        <div class="wallet-display" id="panelWallet">Not connected</div>
+        <div class="balance-row">
+            <span class="balance-label">Shielded Pool:</span>
+            <span class="balance-value" id="panelPoolBalance">--</span>
+        </div>
+        <div class="balance-row">
+            <span class="balance-label">Escrow Balance:</span>
+            <span class="balance-value" id="panelEscrowBalance">--</span>
+        </div>
+        <button class="refresh-btn" onclick="refreshAllBalances()">🔄 Refresh Balances</button>
+    </div>
+
+    <div class="container">
+        <h1>Alerith Duel Arena - ZK Proof</h1>
+
+        <!-- Step 1: Connect Wallet -->
+        <div class="card">
+            <h2>Step 1: Connect Wallet</h2>
+            <div class="step">
+                <div class="step-number" id="step1-status">1</div>
+                <div id="walletButtons" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button id="connectPhantomBtn" onclick="connectWallet('phantom')" style="display: none;">Phantom</button>
+                    <button id="connectSolflareBtn" onclick="connectWallet('solflare')" style="display: none;">Solflare</button>
+                    <button id="connectBackpackBtn" onclick="connectWallet('backpack')" style="display: none;">Backpack</button>
+                    <button id="connectGlowBtn" onclick="connectWallet('glow')" style="display: none;">Glow</button>
+                    <button id="connectCoinbaseBtn" onclick="connectWallet('coinbase')" style="display: none;">Coinbase</button>
+                </div>
+                <div id="noWalletMsg" style="display: none; color: #9ca3af; margin-top: 8px;">
+                    No wallet detected. Please install one of:
+                    <a href="https://phantom.app" target="_blank">Phantom</a>,
+                    <a href="https://solflare.com" target="_blank">Solflare</a>,
+                    <a href="https://backpack.app" target="_blank">Backpack</a>
+                </div>
+            </div>
+            <div id="walletInfo" style="display: none;">
+                <div class="wallet-info">
+                    <div class="label">Wallet Address:</div>
+                    <div class="value" id="walletAddress">-</div>
+                </div>
+                <div class="wallet-info">
+                    <div class="label">Connected via:</div>
+                    <div class="value" id="walletProvider">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Initialize ShadowWire -->
+        <div class="card">
+            <h2>Step 2: Initialize ShadowWire SDK + WASM</h2>
+            <div class="step">
+                <div class="step-number" id="step2-status">2</div>
+                <button id="initShadowPayBtn" onclick="initShadowPay()" disabled>Initialize SDK</button>
+            </div>
+            <div id="shadowPayStatus"></div>
+        </div>
+
+        <!-- Step 3: Authenticate Wallet -->
+        <div class="card">
+            <h2>Step 3: Authenticate Wallet</h2>
+            <div class="step">
+                <div class="step-number" id="step3-status">3</div>
+                <button id="registerBtn" onclick="registerShadowId()" disabled>Sign Authentication</button>
+            </div>
+            <div id="shadowIdStatus"></div>
+            <div id="commitmentInfo" style="display: none;">
+                <div class="wallet-info">
+                    <div class="label">Authenticated:</div>
+                    <div class="value" id="commitment">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Shielded Pool Balance & Deposit/Withdraw -->
+        <div class="card">
+            <h2>Step 4: Shielded Pool Balance</h2>
+            <div class="step">
+                <div class="step-number" id="step4-status">4</div>
+                <button id="checkBalanceBtn" onclick="checkBalance()" disabled>Check Balance</button>
+            </div>
+            <div id="balanceStatus"></div>
+            <div id="balanceDisplay" style="display: none;">
+                <div class="balance-display" id="balanceAmount">0 <span class="token-label">SOL</span></div>
+                <div style="color: #888; margin-top: 5px;">Available in Shielded Pool</div>
+            </div>
+
+            <!-- Deposit/Withdraw Section -->
+            <div id="escrowActions" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="color: #9ca3af; margin-bottom: 15px;">Shielded Pool - Deposit / Withdraw</h3>
+
+                <div class="flex-row" style="margin-bottom: 15px;">
+                    <label>Token:</label>
+                    <select id="tokenSelect" onchange="onTokenChange()">
+                        <option value="SOL">SOL</option>
+                        <option value="USD1">USD1</option>
+                        <option value="RADR">RADR</option>
+                    </select>
+                </div>
+
+                <div class="flex-row" style="margin-bottom: 15px;">
+                    <label>Amount (<span class="token-label">SOL</span>):</label>
+                    <input type="number" id="escrowAmount" class="amount-input" value="0.1" min="0.1" step="0.01" style="width: 120px;">
+                </div>
+
+                <div class="flex-row">
+                    <button onclick="depositToEscrow()" id="depositBtn" style="background: #16a34a;">
+                        ⬆️ Deposit to Shielded Pool
+                    </button>
+                    <button onclick="withdrawFromEscrow()" id="withdrawBtn" class="secondary">
+                        ⬇️ Withdraw from Shielded Pool
+                    </button>
+                </div>
+
+                <div id="escrowTxStatus"></div>
+            </div>
+        </div>
+
+        <!-- Step 5: Create OR Join Duel -->
+        <div class="card">
+            <h2>Step 5: Create or Join Duel</h2>
+
+            <!-- Tab buttons -->
+            <div class="tab-buttons" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="tabCreate" class="tab-btn active" onclick="showTab('create')">🆕 Create New Duel</button>
+                <button id="tabJoin" class="tab-btn" onclick="showTab('join')">🔗 Join Existing Duel</button>
+            </div>
+
+            <!-- CREATE DUEL TAB -->
+            <div id="createTab" class="tab-content">
+                <div class="duel-simulation">
+                    <div class="players-row">
+                        <div class="player-card">
+                            <div style="font-size: 18px; margin-bottom: 10px;">👤 Player 1 (You)</div>
+                            <div id="player1Wallet" style="font-size: 11px; color: #888;">Not connected</div>
+                        </div>
+                        <div class="vs">VS</div>
+                        <div class="player-card">
+                            <div style="font-size: 18px; margin-bottom: 10px;">👤 Player 2</div>
+                            <input type="text" id="player2Wallet" placeholder="Wallet address" style="width: 100%;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <div class="flex-row">
+                        <label>Stake Amount (<span class="token-label">SOL</span>):</label>
+                        <input type="number" id="stakeAmount" class="amount-input" value="0.1" min="0.1" step="0.01">
+                        <span style="color: #888; font-size: 12px;">(min: <span class="min-amount">0.1</span> <span class="token-label">SOL</span>)</span>
+                    </div>
+                </div>
+
+                <div class="step" style="margin-top: 20px;">
+                    <div class="step-number" id="step5a-status">5a</div>
+                    <button id="createDuelBtn" onclick="createDuel()" disabled>Create Duel Session</button>
+                </div>
+                <div id="duelStatus"></div>
+            </div>
+
+            <!-- JOIN DUEL TAB -->
+            <div id="joinTab" class="tab-content" style="display: none;">
+                <div class="status info" style="margin-bottom: 15px;">
+                    💡 Use this to join a duel created by another player. Get the Duel ID from Player 1.
+                </div>
+
+                <div class="flex-row" style="margin-bottom: 15px;">
+                    <label>Duel ID:</label>
+                    <input type="text" id="joinDuelId" placeholder="Enter 32-character duel ID" style="width: 300px;">
+                </div>
+
+                <div class="flex-row" style="margin-bottom: 15px;">
+                    <label>Stake Amount (<span class="token-label">SOL</span>):</label>
+                    <input type="number" id="joinStakeAmount" class="amount-input" value="0.1" min="0.1" step="0.01">
+                    <span style="color: #888; font-size: 12px;">(must match duel stake)</span>
+                </div>
+
+                <div class="step">
+                    <div class="step-number" id="step5join-status">5</div>
+                    <button id="joinDuelBtn" onclick="joinDuel()" disabled>Join & Fetch Duel Info</button>
+                </div>
+                <div id="joinDuelStatus"></div>
+            </div>
+        </div>
+
+        <!-- Step 6: Lock Stake -->
+        <div class="card">
+            <h2>Step 6: Lock Your Stake (ZK Proof)</h2>
+
+            <div id="currentDuelInfo" style="display: none;">
+                <div class="status info">
+                    <strong>Current Duel:</strong> <span id="currentDuelDisplay">-</span><br>
+                    <strong>Stake:</strong> <span id="currentStakeDisplay">-</span> <span class="token-label">SOL</span>
+                </div>
+            </div>
+
+            <div class="step" style="margin-top: 15px;">
+                <div class="step-number" id="step6-status">6</div>
+                <button id="lockStakeBtn" onclick="lockStake()" disabled>Generate ZK Proof & Lock Stake</button>
+            </div>
+            <div id="lockStatus"></div>
+        </div>
+
+        <!-- Step 7: View Duel Status -->
+        <div class="card">
+            <h2>Step 7: Check Duel Status</h2>
+            <div class="step">
+                <div class="step-number" id="step7-status">7</div>
+                <button id="checkDuelBtn" onclick="checkDuelStatus()" disabled>Check Duel Status</button>
+                <button class="secondary" onclick="copyDuelId()" id="copyDuelBtn" style="display: none;">📋 Copy Duel ID</button>
+            </div>
+            <div id="duelStatusResult"></div>
+        </div>
+
+        <!-- Step 8: Simulate Settlement (for testing) -->
+        <div class="card" style="border-color: rgba(255, 215, 0, 0.5);">
+            <h2>🧪 Step 8: Simulate Settlement (Testing Only)</h2>
+            <p style="color: #888; font-size: 12px; margin-bottom: 15px;">
+                In production, the game server calls /duel/settle after combat ends.
+                This section allows you to simulate that for testing purposes.
+            </p>
+
+            <div class="step">
+                <div class="step-number" id="step8-status">8</div>
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 5px; color: #60a5fa;">Select Winner:</label>
+                    <select id="winnerSelect" style="width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 6px; color: #e0e0e0;">
+                        <option value="player1">Player 1 (You)</option>
+                        <option value="player2">Player 2 (Opponent)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex-row" style="margin-top: 15px;">
+                <button id="settleBtn" onclick="simulateSettle()" disabled style="background: #16a34a;">
+                    💰 Settle Duel (Pay Winner)
+                </button>
+                <button id="refundBtn" onclick="simulateRefund()" disabled class="secondary" style="background: #4b5563;">
+                    ↩️ Refund Both Players
+                </button>
+            </div>
+
+            <div id="settlementStatus" style="margin-top: 15px;"></div>
+
+            <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <strong style="color: #9ca3af;">Expected Payouts:</strong>
+                <div id="payoutPreview" style="margin-top: 10px; font-family: monospace; font-size: 12px; color: #888;">
+                    Create a duel to see payout preview...
+                </div>
+            </div>
+        </div>
+
+        <!-- Verify Settlement -->
+        <div class="card">
+            <h2>🔍 Verify Settlement</h2>
+            <p style="color: #888; font-size: 12px; margin-bottom: 15px;">
+                Verify any duel settlement was fair. The commitment hash is posted on-chain BEFORE the payout.
+            </p>
+            <div class="step">
+                <div class="step-number">✓</div>
+                <div style="flex: 1;">
+                    <input type="text" id="verifyDuelId" placeholder="Enter Duel ID to verify" style="width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444; border-radius: 6px; color: #e0e0e0;">
+                </div>
+            </div>
+            <div class="flex-row" style="margin-top: 15px;">
+                <button onclick="verifySettlement()">Verify</button>
+                <button class="secondary" onclick="openVerifyFormatted()">Open Formatted</button>
+                <button class="secondary" onclick="openVerifyRaw()">Open Raw JSON</button>
+            </div>
+            <div id="verifyResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- Log Output -->
+        <div class="card">
+            <h2>📋 Log Output</h2>
+            <div class="log-container" id="logContainer"></div>
+            <button class="secondary" onclick="clearLog()" style="margin-top: 10px;">Clear Log</button>
+        </div>
+    </div>
+
+    <!-- Load external scripts at end of body for better loading -->
+    <script src="https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js"></script>
+    <script src="/test/shadowwire-browser.js"></script>
+
+    <script>
+        // Configuration
+        const SIDECAR_BASE = window.location.origin;
+        const SHADOWPAY_API = 'https://shadow.radr.fun/shadowpay';
+        const SHADOWWIRE_API = 'https://shadow.radr.fun/shadowwire';
+        const SERVICE_WALLET = 'DvnKnTsrstcsec88oKeHWntauehTU4a56N4ghofvgTdc'; // Escrow wallet
+
+        // Test wallets from .env (for convenience)
+        const TEST_WALLETS = {
+            player1: '8ir788UAwfaqvg2L6fJix6iuGW9QyPVi5YMEgGu8tkoj',
+            player2: '9ay4XkKoV5qmq9ttfKEP9cpKu8s7bEaVkW5BrvLwsdZ'
+        };
+
+        // State
+        let walletAddress = null;
+        let shadowWireClient = null;
+        let wasmInitialized = false;
+        let currentDuelId = null;
+        let currentStakeAmount = 0;
+        let shieldedBalance = 0;
+        let selectedToken = 'SOL';
+
+        // Token decimals for conversion
+        const TOKEN_DECIMALS = { SOL: 9, USD1: 6, RADR: 9 };
+
+        // Minimum amounts per token (in smallest units)
+        // 10% above ShadowWire minimums to cover fees and ensure refunds work
+        const TOKEN_MINIMUMS = {
+            SOL: 110_000_000,           // 0.11 SOL
+            USD1: 5_500_000,            // 5.5 USD1
+            RADR: 11_000_000_000_000,   // 11,000 RADR
+        };
+
+        // Minimum amounts in display units
+        const TOKEN_MINIMUM_DISPLAY = { SOL: 0.11, USD1: 5.5, RADR: 11000 };
+
+        // Token mint addresses for API calls
+        const TOKEN_MINTS = {
+            SOL: null, // Native, no mint needed
+            USD1: 'USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB',
+            RADR: 'CzFvsLdUazabdiu9TYXujj4EY495fG7VgJJ3vQs6bonk'
+        };
+
+        function getTokenMint() {
+            return TOKEN_MINTS[selectedToken] || null;
+        }
+
+        function getTokenDecimals() {
+            return TOKEN_DECIMALS[selectedToken] || 9;
+        }
+
+        function getMinimumAmount() {
+            return TOKEN_MINIMUM_DISPLAY[selectedToken] || 0.1;
+        }
+
+        function getMinimumFormatted() {
+            return getMinimumAmount().toLocaleString();
+        }
+
+        function getMinimumSmallestUnit() {
+            return TOKEN_MINIMUMS[selectedToken] || 100_000_000;
+        }
+
+        function toSmallestUnit(amount) {
+            return Math.floor(amount * Math.pow(10, getTokenDecimals()));
+        }
+
+        function fromSmallestUnit(amount) {
+            return amount / Math.pow(10, getTokenDecimals());
+        }
+
+        function onTokenChange() {
+            selectedToken = document.getElementById('tokenSelect').value;
+            document.querySelectorAll('.token-label').forEach(el => el.textContent = selectedToken);
+            // Update minimum display
+            document.querySelectorAll('.min-amount').forEach(el => el.textContent = getMinimumFormatted());
+            // Update input min attributes
+            document.querySelectorAll('.amount-input').forEach(el => {
+                el.min = getMinimumAmount();
+                if (parseFloat(el.value) < getMinimumAmount()) {
+                    el.value = getMinimumAmount();
+                }
+            });
+            // Re-fetch balances for the new token
+            if (walletAddress) {
+                checkBalance();
+                refreshAllBalances();
+            }
+        }
+
+        // Helper: Sign message with connected wallet
+        async function signMessageWithWallet(message, encoding = 'utf8') {
+            if (!connectedProvider || !connectedProvider.wallet) {
+                throw new Error('No wallet connected');
+            }
+            const wallet = connectedProvider.wallet;
+
+            // Different wallets have slightly different APIs
+            if (wallet.signMessage) {
+                const encodedMessage = typeof message === 'string'
+                    ? new TextEncoder().encode(message)
+                    : message;
+                return await wallet.signMessage(encodedMessage, encoding);
+            } else {
+                throw new Error(`${connectedProvider.name} does not support message signing`);
+            }
+        }
+
+        // Helper: Sign transaction with connected wallet
+        async function signTransactionWithWallet(transaction) {
+            if (!connectedProvider || !connectedProvider.wallet) {
+                throw new Error('No wallet connected');
+            }
+            const wallet = connectedProvider.wallet;
+
+            if (wallet.signTransaction) {
+                return await wallet.signTransaction(transaction);
+            } else {
+                throw new Error(`${connectedProvider.name} does not support transaction signing`);
+            }
+        }
+
+        // Tab switching
+        function showTab(tab) {
+            document.getElementById('createTab').style.display = tab === 'create' ? 'block' : 'none';
+            document.getElementById('joinTab').style.display = tab === 'join' ? 'block' : 'none';
+            document.getElementById('tabCreate').className = 'tab-btn ' + (tab === 'create' ? 'active' : '');
+            document.getElementById('tabJoin').className = 'tab-btn ' + (tab === 'join' ? 'active' : '');
+        }
+
+        // ============================================================================
+        // Balance Panel Functions
+        // ============================================================================
+
+        // Fetch pool balance from /api/pool/balance/{wallet}
+        async function fetchPoolBalance() {
+            if (!walletAddress) return null;
+            try {
+                const mint = getTokenMint();
+                let url = `${SHADOWPAY_API}/api/pool/balance/${walletAddress}`;
+                if (mint) {
+                    url += `?token_mint=${mint}`;
+                }
+                const response = await fetch(url);
+                const result = await response.json();
+                // Response: { wallet, available, deposited, withdrawn_to_escrow, migrated, pool_address }
+                return result.available || result.balance || 0;
+            } catch (err) {
+                console.error('Failed to fetch pool balance:', err);
+                return null;
+            }
+        }
+
+        // Fetch escrow balance from /api/escrow/balance/{wallet}
+        async function fetchEscrowBalance() {
+            if (!walletAddress) return null;
+            try {
+                const mint = getTokenMint();
+                let url = `${SHADOWPAY_API}/api/escrow/balance/${walletAddress}`;
+                if (mint) {
+                    url += `?token_mint=${mint}`;
+                }
+                const response = await fetch(url);
+                const result = await response.json();
+                // Response: { wallet_address, balance }
+                return result.balance || 0;
+            } catch (err) {
+                console.error('Failed to fetch escrow balance:', err);
+                return null;
+            }
+        }
+
+        // Update the balance panel display
+        function updateBalancePanel(poolBalance, escrowBalance) {
+            const poolEl = document.getElementById('panelPoolBalance');
+            const escrowEl = document.getElementById('panelEscrowBalance');
+
+            if (poolBalance !== null) {
+                const poolDisplay = fromSmallestUnit(poolBalance).toFixed(6);
+                poolEl.textContent = `${poolDisplay} ${selectedToken}`;
+                poolEl.classList.remove('loading');
+            } else {
+                poolEl.textContent = 'Error';
+                poolEl.classList.remove('loading');
+            }
+
+            if (escrowBalance !== null) {
+                const escrowDisplay = fromSmallestUnit(escrowBalance).toFixed(6);
+                escrowEl.textContent = `${escrowDisplay} ${selectedToken}`;
+                escrowEl.classList.remove('loading');
+            } else {
+                escrowEl.textContent = 'Error';
+                escrowEl.classList.remove('loading');
+            }
+        }
+
+        // Refresh all balances
+        async function refreshAllBalances() {
+            if (!walletAddress) return;
+
+            const poolEl = document.getElementById('panelPoolBalance');
+            const escrowEl = document.getElementById('panelEscrowBalance');
+            poolEl.textContent = '...';
+            poolEl.classList.add('loading');
+            escrowEl.textContent = '...';
+            escrowEl.classList.add('loading');
+
+            const [poolBalance, escrowBalance] = await Promise.all([
+                fetchPoolBalance(),
+                fetchEscrowBalance()
+            ]);
+
+            updateBalancePanel(poolBalance, escrowBalance);
+
+            // Also update the main balance display
+            shieldedBalance = poolBalance || 0;
+            const balanceDisplay = fromSmallestUnit(shieldedBalance).toFixed(6);
+            document.getElementById('balanceAmount').innerHTML = `${balanceDisplay} <span class="token-label">${selectedToken}</span>`;
+        }
+
+        // Show balance panel when wallet connects
+        function showBalancePanel() {
+            const panel = document.getElementById('balancePanel');
+            const walletDisplay = document.getElementById('panelWallet');
+            panel.style.display = 'block';
+            walletDisplay.textContent = `${walletAddress.slice(0, 8)}...${walletAddress.slice(-4)}`;
+            refreshAllBalances();
+        }
+
+        // ============================================================================
+
+        // Copy duel ID to clipboard
+        function copyDuelId() {
+            if (currentDuelId) {
+                navigator.clipboard.writeText(currentDuelId).then(() => {
+                    log('Duel ID copied to clipboard!', 'success');
+                    const btn = document.getElementById('copyDuelBtn');
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => { btn.textContent = '📋 Copy Duel ID'; }, 2000);
+                });
+            }
+        }
+
+        // Update current duel display
+        function updateCurrentDuelDisplay() {
+            if (currentDuelId) {
+                document.getElementById('currentDuelInfo').style.display = 'block';
+                document.getElementById('currentDuelDisplay').textContent = currentDuelId;
+                document.getElementById('currentStakeDisplay').textContent = currentStakeAmount;
+                document.getElementById('copyDuelBtn').style.display = 'inline-block';
+            }
+        }
+
+        // Logging
+        function log(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="timestamp">[${time}]</span> ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+
+        async function verifySettlement() {
+            const duelId = document.getElementById('verifyDuelId').value.trim();
+            if (!duelId) {
+                document.getElementById('verifyResult').innerHTML = '<div class="status error">Please enter a Duel ID</div>';
+                return;
+            }
+
+            document.getElementById('verifyResult').innerHTML = '<div class="status info">Verifying...</div>';
+
+            try {
+                const response = await fetch(`${SIDECAR_BASE}/duel/verify/${duelId}`);
+                const result = await response.json();
+
+                if (!result.success) {
+                    document.getElementById('verifyResult').innerHTML = `<div class="status error">Error: ${result.error}</div>`;
+                    return;
+                }
+
+                const v = result.verification;
+                const c = result.commitment;
+                const o = result.onChain;
+
+                let html = `<div class="status success" style="text-align: left;">
+                    <strong>✓ Settlement Verified</strong><br><br>
+                    <strong>Winner:</strong> ${v.winnerStealthId.slice(0, 20)}...<br>
+                    <strong>Loser:</strong> ${v.loserStealthId.slice(0, 20)}...<br>
+                    <strong>Time:</strong> ${v.timestampHuman}<br><br>
+                    <strong>Hash Matches:</strong> ${c.hashMatches ? '✓ Yes' : '✗ No'}<br>
+                    <strong>On-Chain:</strong> ${o.posted ? '✓ Posted' : '✗ Not posted'}<br>`;
+
+                if (o.solscanUrl) {
+                    html += `<br><a href="${o.solscanUrl}" target="_blank" style="color: #60a5fa;">View on Solscan →</a>`;
+                }
+
+                html += `<br><br><details><summary style="cursor: pointer; color: #888;">Raw Data (for manual verification)</summary>
+                    <pre style="margin-top: 10px; padding: 10px; background: #0a0a0a; border-radius: 4px; overflow-x: auto; font-size: 11px;">${c.rawData}</pre>
+                    <code style="font-size: 10px; color: #666;">echo -n '${c.rawData}' | sha256sum</code>
+                </details>`;
+
+                html += `</div>`;
+                document.getElementById('verifyResult').innerHTML = html;
+            } catch (error) {
+                document.getElementById('verifyResult').innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+            }
+        }
+
+        function openVerifyFormatted() {
+            const duelId = document.getElementById('verifyDuelId').value.trim();
+            if (!duelId) {
+                document.getElementById('verifyResult').innerHTML = '<div class="status error">Please enter a Duel ID</div>';
+                return;
+            }
+            window.open(`${SIDECAR_BASE}/test/verify.html?duelId=${duelId}`, '_blank');
+        }
+
+        function openVerifyRaw() {
+            const duelId = document.getElementById('verifyDuelId').value.trim();
+            if (!duelId) {
+                document.getElementById('verifyResult').innerHTML = '<div class="status error">Please enter a Duel ID</div>';
+                return;
+            }
+            window.open(`${SIDECAR_BASE}/duel/verify/${duelId}`, '_blank');
+        }
+
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+        }
+
+        function setStepStatus(stepId, status) {
+            const el = document.getElementById(stepId);
+            el.className = 'step-number ' + status;
+        }
+
+        function showStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        // Helper to parse multi-TX signatures (format: "TX1:sig1 TX2:sig2")
+        function parseMultiTxSignatures(txString) {
+            if (!txString) return [];
+            // Check if it contains TX1:, TX2: format
+            const txMatches = txString.match(/TX\d+:([A-Za-z0-9]+)/g);
+            if (txMatches && txMatches.length > 0) {
+                return txMatches.map(tx => {
+                    const [label, sig] = tx.split(':');
+                    return { label, signature: sig };
+                });
+            }
+            // Single signature
+            return [{ label: 'TX', signature: txString }];
+        }
+
+        // Helper to render TX links as HTML
+        function renderTxLinksHtml(txString, solscanBase = 'https://solscan.io/tx/') {
+            const txs = parseMultiTxSignatures(txString);
+            return txs.map(tx => `
+                <div style="margin-left: 10px; margin-bottom: 3px;">
+                    <span style="color: #888; font-size: 11px;">${tx.label}:</span>
+                    <a href="${solscanBase}${tx.signature}" target="_blank" style="color: #60a5fa; word-break: break-all; font-size: 11px;">
+                        ${tx.signature}
+                    </a>
+                </div>
+            `).join('');
+        }
+
+        // Supported wallet providers
+        let connectedProvider = null;
+
+        const walletProviders = {
+            phantom: {
+                name: 'Phantom',
+                check: () => window.phantom?.solana?.isPhantom || window.solana?.isPhantom,
+                get: () => window.phantom?.solana || window.solana,
+            },
+            solflare: {
+                name: 'Solflare',
+                check: () => window.solflare?.isSolflare,
+                get: () => window.solflare,
+            },
+            backpack: {
+                name: 'Backpack',
+                check: () => window.backpack?.isBackpack,
+                get: () => window.backpack,
+            },
+            glow: {
+                name: 'Glow',
+                check: () => window.glow?.isGlow,
+                get: () => window.glow,
+            },
+            coinbase: {
+                name: 'Coinbase',
+                check: () => window.coinbaseSolana,
+                get: () => window.coinbaseSolana,
+            },
+        };
+
+        // Detect available wallets
+        function detectWallets() {
+            const available = [];
+            for (const [key, provider] of Object.entries(walletProviders)) {
+                if (provider.check()) {
+                    available.push(key);
+                    document.getElementById(`connect${provider.name}Btn`).style.display = 'inline-block';
+                    log(`${provider.name} wallet detected`);
+                }
+            }
+            if (available.length === 0) {
+                document.getElementById('noWalletMsg').style.display = 'block';
+                log('No wallet detected - please install a Solana wallet', 'warning');
+            }
+            return available;
+        }
+
+        // Step 1: Connect Wallet
+        async function connectWallet(providerKey) {
+            try {
+                const provider = walletProviders[providerKey];
+                if (!provider) {
+                    throw new Error(`Unknown wallet provider: ${providerKey}`);
+                }
+
+                log(`Connecting to ${provider.name} wallet...`);
+
+                if (!provider.check()) {
+                    throw new Error(`${provider.name} wallet not found!`);
+                }
+
+                const wallet = provider.get();
+                log(`Requesting connection from ${provider.name}...`);
+                const response = await wallet.connect();
+                log(`Connection response received`, 'info');
+
+                // Different wallets return publicKey in different ways
+                let publicKey = null;
+                if (response && response.publicKey) {
+                    // Phantom, Solflare style: { publicKey: PublicKey }
+                    publicKey = response.publicKey;
+                } else if (wallet.publicKey) {
+                    // Some wallets set publicKey on the wallet object after connect
+                    publicKey = wallet.publicKey;
+                } else if (response && typeof response.toString === 'function') {
+                    // Some wallets return the PublicKey directly
+                    publicKey = response;
+                }
+
+                if (!publicKey) {
+                    throw new Error(`Could not get public key from ${provider.name}`);
+                }
+
+                walletAddress = publicKey.toString();
+                connectedProvider = { key: providerKey, ...provider, wallet };
+
+                log(`Connected via ${provider.name}: ${walletAddress.slice(0, 8)}...${walletAddress.slice(-4)}`, 'success');
+
+                document.getElementById('walletAddress').textContent = walletAddress;
+                document.getElementById('walletProvider').textContent = provider.name;
+                document.getElementById('walletInfo').style.display = 'block';
+                document.getElementById('player1Wallet').textContent = `${walletAddress.slice(0, 8)}...${walletAddress.slice(-4)}`;
+
+                setStepStatus('step1-status', 'done');
+                document.getElementById('initShadowPayBtn').disabled = false;
+
+                // Hide all connect buttons and show connected state
+                document.getElementById('walletButtons').innerHTML = `<span style="color: #27ae60;">Connected to ${provider.name} ✓</span>`;
+
+                // Show and populate balance panel
+                showBalancePanel();
+
+            } catch (error) {
+                log(`Wallet connection failed: ${error.message}`, 'error');
+                setStepStatus('step1-status', 'error');
+            }
+        }
+
+        // Step 2: Initialize ShadowWire SDK
+        async function initShadowPay() {
+            try {
+                log('Initializing ShadowWire SDK...');
+
+                if (typeof ShadowWire === 'undefined') {
+                    throw new Error('ShadowWire SDK not loaded. Check if shadowwire-browser.js is served.');
+                }
+
+                // Check WASM support
+                if (!ShadowWire.isWASMSupported()) {
+                    throw new Error('WebAssembly not supported in this browser');
+                }
+
+                log('WASM supported, loading module...');
+
+                // Initialize WASM
+                await ShadowWire.initWASM('/wasm/settler_wasm_bg.wasm');
+                wasmInitialized = true;
+
+                // Create client
+                shadowWireClient = new ShadowWire.ShadowWireClient();
+
+                log('ShadowWire SDK initialized with WASM', 'success');
+                showStatus('shadowPayStatus', 'SDK + WASM initialized successfully', 'success');
+
+                setStepStatus('step2-status', 'done');
+                document.getElementById('registerBtn').disabled = false;
+                document.getElementById('initShadowPayBtn').disabled = true;
+
+            } catch (error) {
+                log(`ShadowWire init failed: ${error.message}`, 'error');
+                showStatus('shadowPayStatus', `Error: ${error.message}`, 'error');
+                setStepStatus('step2-status', 'error');
+            }
+        }
+
+        // Step 3: Register with ShadowWire (sign message to prove wallet ownership)
+        async function registerShadowId() {
+            try {
+                log('Authenticating with ShadowWire...');
+                showStatus('shadowIdStatus', 'Please sign the message in your wallet...', 'info');
+
+                // Create a message for signing
+                const message = `Authenticate with ShadowWire\nWallet: ${walletAddress}\nTimestamp: ${Date.now()}`;
+                const encodedMessage = new TextEncoder().encode(message);
+
+                // Sign with Phantom
+                const signatureResponse = await signMessageWithWallet(encodedMessage);
+                const signature = btoa(String.fromCharCode(...signatureResponse.signature));
+
+                log('Message signed successfully');
+
+                // For ShadowWire, the commitment is derived from the wallet signature
+                // Store wallet + signature for later use in transfers
+                window.walletAuth = {
+                    wallet: walletAddress,
+                    signature: signature,
+                    message: message,
+                    signMessage: async (msg) => {
+                        const encoded = new TextEncoder().encode(msg);
+                        const resp = await signMessageWithWallet(encoded);
+                        return btoa(String.fromCharCode(...resp.signature));
+                    }
+                };
+
+                log('Wallet authenticated for ShadowWire', 'success');
+                showStatus('shadowIdStatus', 'Wallet authenticated successfully', 'success');
+
+                document.getElementById('commitment').textContent = `Wallet: ${walletAddress.slice(0, 8)}...${walletAddress.slice(-4)}`;
+                document.getElementById('commitmentInfo').style.display = 'block';
+
+                setStepStatus('step3-status', 'done');
+                document.getElementById('checkBalanceBtn').disabled = false;
+                document.getElementById('registerBtn').disabled = true;
+
+            } catch (error) {
+                log(`Authentication failed: ${error.message}`, 'error');
+                showStatus('shadowIdStatus', `Error: ${error.message}`, 'error');
+                setStepStatus('step3-status', 'error');
+            }
+        }
+
+        // Step 4: Check Shielded Pool Balance
+        async function checkBalance() {
+            try {
+                log(`Checking Shielded Pool balance for ${selectedToken} via ShadowPay API...`);
+
+                // Using /api/pool/balance as per docs pattern - use token_mint for non-SOL tokens
+                const mint = getTokenMint();
+                let balanceUrl = `${SHADOWPAY_API}/api/pool/balance/${walletAddress}`;
+                if (mint) {
+                    balanceUrl += `?token_mint=${mint}`;
+                }
+                const response = await fetch(balanceUrl);
+                const result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                // Pool balance endpoint returns 'available', not 'balance'
+                shieldedBalance = result.available || result.balance || 0;
+                const balanceDisplay = fromSmallestUnit(shieldedBalance);
+
+                log(`Shielded Pool balance: ${balanceDisplay.toFixed(6)} ${selectedToken} (${shieldedBalance} smallest units)`, 'success');
+
+                document.getElementById('balanceAmount').innerHTML = `${balanceDisplay.toFixed(6)} <span class="token-label">${selectedToken}</span>`;
+                document.getElementById('balanceDisplay').style.display = 'block';
+                document.getElementById('escrowActions').style.display = 'block';
+
+                // Minimum stake per token
+                const MIN_STAKE = getMinimumSmallestUnit();
+
+                if (shieldedBalance >= MIN_STAKE) {
+                    showStatus('balanceStatus', `Balance: ${balanceDisplay.toFixed(6)} ${selectedToken} (min stake: ${getMinimumFormatted()} ${selectedToken})`, 'success');
+                    setStepStatus('step4-status', 'done');
+                    document.getElementById('createDuelBtn').disabled = false;
+                    document.getElementById('joinDuelBtn').disabled = false;
+                } else {
+                    showStatus('balanceStatus', `Balance too low. Need at least ${getMinimumFormatted()} ${selectedToken} to stake. Use deposit below.`, 'warning');
+                    setStepStatus('step4-status', 'error');
+                }
+
+            } catch (error) {
+                log(`Balance check failed: ${error.message}`, 'error');
+                showStatus('balanceStatus', `Error: ${error.message}`, 'error');
+                setStepStatus('step4-status', 'error');
+                // Still show escrow actions so user can try to deposit
+                document.getElementById('escrowActions').style.display = 'block';
+            }
+        }
+
+        // Deposit to Shielded Pool
+        async function depositToEscrow() {
+            try {
+                const amount = parseFloat(document.getElementById('escrowAmount').value);
+                if (amount < getMinimumAmount()) {
+                    throw new Error(`Minimum deposit is ${getMinimumFormatted()} ${selectedToken}`);
+                }
+
+                const amountSmallestUnit = toSmallestUnit(amount);
+                log(`Depositing ${amount} ${selectedToken} (${amountSmallestUnit} smallest units) to Shielded Pool...`);
+                showStatus('escrowTxStatus', 'Creating deposit transaction...', 'info');
+
+                // Get unsigned transaction from ShadowPay
+                // Using /api/pool/deposit as per docs (not /api/escrow/deposit)
+                const response = await fetch(`${SHADOWPAY_API}/api/pool/deposit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        wallet: walletAddress,
+                        amount: amountSmallestUnit,
+                        token: selectedToken,
+                        token_mint: getTokenMint()
+                    })
+                });
+
+                const result = await response.json();
+                log(`Deposit API response status: ${response.status}`);
+                log(`Deposit API response keys: ${Object.keys(result).join(', ')}`);
+                log(`API result: ${JSON.stringify(result).slice(0, 300)}...`);
+                console.log('Full ShadowPay API response:', result);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${result.error || result.message || JSON.stringify(result)}`);
+                }
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                // API might return 'transaction', 'unsigned_tx_base64', or 'tx'
+                const txBase64 = result.transaction || result.unsigned_tx_base64 || result.tx;
+                if (!txBase64) {
+                    log(`Full response: ${JSON.stringify(result, null, 2)}`, 'error');
+                    throw new Error(`No transaction returned. Response keys: ${Object.keys(result).join(', ')}`);
+                }
+
+                log('Transaction received from API, decoding...');
+                showStatus('escrowTxStatus', 'Please approve the transaction in your wallet...', 'info');
+
+                // Decode the base64 transaction to bytes
+                const txBytes = Uint8Array.from(atob(txBase64), c => c.charCodeAt(0));
+                log(`Transaction bytes length: ${txBytes.length}`);
+
+                // Check first byte to determine transaction type
+                const isVersioned = txBytes[0] >= 0x80;
+                log(`Transaction type: ${isVersioned ? 'VersionedTransaction (v0)' : 'Legacy Transaction'}`);
+
+                // Try using VersionedTransaction to preserve message structure
+                // This avoids the recompilation that happens with legacy Transaction
+                let signedTxBase64;
+                let signature;
+
+                if (isVersioned) {
+                    // For versioned transactions, deserialize as VersionedTransaction
+                    log('Using VersionedTransaction flow...');
+                    const vTx = solanaWeb3.VersionedTransaction.deserialize(txBytes);
+
+                    // Update the blockhash in the message without recompiling
+                    // VersionedTransaction.message has the blockhash as a property
+                    log(`Original blockhash: ${vTx.message.recentBlockhash}`);
+
+                    // Set the real blockhash
+                    vTx.message.recentBlockhash = result.recent_blockhash;
+                    log(`Updated blockhash: ${result.recent_blockhash.slice(0, 16)}...`);
+
+                    // Sign with Phantom
+                    log('Requesting signature from Phantom...');
+                    const signedVTx = await signTransactionWithWallet(vTx);
+                    log('Transaction signed successfully');
+
+                    // Serialize
+                    const signedVTxBuffer = signedVTx.serialize();
+                    signedTxBase64 = btoa(String.fromCharCode(...signedVTxBuffer));
+                    log(`Signed tx serialized: ${signedVTxBuffer.length} bytes`);
+
+                } else {
+                    // For legacy transactions - detailed analysis and signing
+                    log('Analyzing legacy transaction structure...');
+
+                    // Parse the transaction structure
+                    const numSignatures = txBytes[0];
+                    log(`Signature slots in original tx: ${numSignatures}`);
+
+                    // Message starts after signature area
+                    const messageStart = 1 + numSignatures * 64;
+                    const messageBytes = txBytes.slice(messageStart);
+                    log(`Message starts at byte ${messageStart}, length: ${messageBytes.length}`);
+
+                    // Parse message header
+                    const numRequiredSignatures = messageBytes[0];
+                    const numReadonlySigned = messageBytes[1];
+                    const numReadonlyUnsigned = messageBytes[2];
+                    log(`Message header: ${numRequiredSignatures} required sigs, ${numReadonlySigned} readonly signed, ${numReadonlyUnsigned} readonly unsigned`);
+
+                    // Parse accounts
+                    let offset = 3;
+                    const numAccounts = messageBytes[offset];
+                    offset += 1;
+                    log(`Total accounts: ${numAccounts}`);
+
+                    // Log all accounts with their signer/writable status
+                    const accounts = [];
+                    for (let i = 0; i < numAccounts; i++) {
+                        const pubkeyBytes = messageBytes.slice(offset + i * 32, offset + (i + 1) * 32);
+                        // Use PublicKey to convert bytes to base58
+                        const pubkey = new solanaWeb3.PublicKey(pubkeyBytes).toBase58();
+                        const isSigner = i < numRequiredSignatures;
+                        const isWritable = i < (numRequiredSignatures - numReadonlySigned) ||
+                            (i >= numRequiredSignatures && i < (numAccounts - numReadonlyUnsigned));
+                        accounts.push({ pubkey, isSigner, isWritable });
+
+                        // Highlight our wallet
+                        const isOurs = pubkey === walletAddress;
+                        log(`  [${i}] ${pubkey.slice(0, 8)}...${pubkey.slice(-4)} ${isSigner ? '✍️SIGNER' : ''} ${isWritable ? '✏️WRITE' : '📖READ'} ${isOurs ? '⭐OUR WALLET' : ''}`);
+                    }
+
+                    // Skip to blockhash
+                    offset += numAccounts * 32;
+                    log(`Blockhash at offset ${offset}`);
+
+                    // Check current blockhash in transaction
+                    const currentBlockhashBytes = messageBytes.slice(offset, offset + 32);
+                    const currentBlockhash = new solanaWeb3.PublicKey(currentBlockhashBytes).toBase58();
+                    log(`Current blockhash in tx: ${currentBlockhash.slice(0, 16)}...`);
+
+                    // Check if we need to replace the blockhash
+                    let modifiedMessageBytes = messageBytes;
+                    let finalBlockhash = currentBlockhash;
+
+                    // If API provides a blockhash, use it; otherwise fetch a fresh one
+                    if (result.recent_blockhash) {
+                        const newBlockhashPubkey = new solanaWeb3.PublicKey(result.recent_blockhash);
+                        const newBlockhashBytes = newBlockhashPubkey.toBytes();
+                        modifiedMessageBytes = new Uint8Array(messageBytes);
+                        modifiedMessageBytes.set(newBlockhashBytes, offset);
+                        finalBlockhash = result.recent_blockhash;
+                        log(`Blockhash replaced with API value: ${finalBlockhash.slice(0, 16)}...`);
+                    } else if (currentBlockhash === '11111111111111111111111111111111' || currentBlockhash.startsWith('1111111')) {
+                        // Placeholder blockhash - need to fetch a fresh one
+                        log('Blockhash is placeholder, fetching fresh blockhash...');
+                        const bhResponse = await fetch(`${SIDECAR_BASE}/rpc/latest-blockhash`);
+                        const bhResult = await bhResponse.json();
+                        if (bhResult.success && bhResult.blockhash) {
+                            const newBlockhashPubkey = new solanaWeb3.PublicKey(bhResult.blockhash);
+                            const newBlockhashBytes = newBlockhashPubkey.toBytes();
+                            modifiedMessageBytes = new Uint8Array(messageBytes);
+                            modifiedMessageBytes.set(newBlockhashBytes, offset);
+                            finalBlockhash = bhResult.blockhash;
+                            log(`Blockhash replaced with fresh value: ${finalBlockhash.slice(0, 16)}...`);
+                        } else {
+                            throw new Error('Failed to fetch blockhash: ' + (bhResult.error || 'Unknown error'));
+                        }
+                    } else {
+                        log(`Using existing blockhash: ${currentBlockhash.slice(0, 16)}...`);
+                    }
+
+                    // Find our wallet's position
+                    const ourIndex = accounts.findIndex(a => a.pubkey === walletAddress);
+                    if (ourIndex === -1) {
+                        log(`ERROR: Our wallet ${walletAddress.slice(0, 8)}... is NOT in the transaction accounts!`, 'error');
+                        throw new Error('Wallet not found in transaction accounts');
+                    } else if (!accounts[ourIndex].isSigner) {
+                        log(`ERROR: Our wallet is at index ${ourIndex} but NOT marked as signer! This is the issue.`, 'error');
+                        log(`Message header says only first ${numRequiredSignatures} accounts are signers.`);
+                    } else {
+                        log(`Our wallet is at index ${ourIndex} and IS marked as signer ✓`, 'success');
+                    }
+
+                    // Parse message (use modified bytes if we changed the blockhash)
+                    const finalMessageBytes = modifiedMessageBytes instanceof Uint8Array ? modifiedMessageBytes : new Uint8Array(modifiedMessageBytes);
+                    const parsedMessage = solanaWeb3.Message.from(finalMessageBytes);
+                    log(`Parsed message. Blockhash: ${parsedMessage.recentBlockhash}`);
+
+                    // Log each instruction's account references
+                    try {
+                        log('--- Instruction Account References ---');
+                        // Message.instructions is the compiled instructions array
+                        const instructions = parsedMessage.instructions || parsedMessage.compiledInstructions || [];
+                        instructions.forEach((ix, i) => {
+                            const programId = parsedMessage.accountKeys[ix.programIdIndex].toBase58();
+                            const programName = programId.startsWith('Compute') ? 'ComputeBudget' :
+                                               programId.startsWith('1111') ? 'System' :
+                                               programId.startsWith('GQBq') ? 'ShadowPay' : programId.slice(0, 8);
+                            log(`Instruction ${i} (${programName}):`);
+                            log(`  Program: ${programId.slice(0, 8)}...`);
+                            // accounts can be 'accounts' or 'accountKeyIndexes' depending on version
+                            const accIndices = ix.accounts || ix.accountKeyIndexes || [];
+                            log(`  Account indices: [${Array.from(accIndices).join(', ')}]`);
+                            Array.from(accIndices).forEach((accIdx, j) => {
+                                const accPubkey = parsedMessage.accountKeys[accIdx].toBase58();
+                                const isSigner = accIdx < numRequiredSignatures;
+                                const isOurs = accPubkey === walletAddress;
+                                log(`    [${j}] -> msg[${accIdx}] = ${accPubkey.slice(0, 8)}... ${isSigner ? '✍️' : ''} ${isOurs ? '⭐OURS' : ''}`);
+                            });
+                        });
+                        log('--- End Instructions ---');
+                    } catch (parseErr) {
+                        log(`Could not parse instructions: ${parseErr.message}`, 'error');
+                    }
+
+                    // Create transaction using populate
+                    const transaction = solanaWeb3.Transaction.populate(parsedMessage, []);
+                    log(`Transaction created with ${transaction.instructions.length} instructions`);
+
+                    // CRITICAL: Cache the message to prevent recompilation during serialize
+                    // The Transaction class caches compiled message in _message property
+                    transaction._message = parsedMessage;
+                    log('Cached message to prevent recompilation');
+
+                    // Request signature from Phantom
+                    log('Requesting signature from Phantom...');
+                    const signedTransaction = await signTransactionWithWallet(transaction);
+                    log('Transaction signed by Phantom');
+
+                    // Log signature info
+                    log(`Signed tx has ${signedTransaction.signatures.length} signature(s)`);
+                    signedTransaction.signatures.forEach((sig, i) => {
+                        const hasSig = sig.signature && sig.signature.length > 0;
+                        log(`  Sig[${i}]: ${sig.publicKey.toBase58().slice(0, 8)}... ${hasSig ? '✓ SIGNED' : '✗ EMPTY'}`);
+                    });
+
+                    // Check if the message was preserved or recompiled
+                    const serializedMessage = signedTransaction.serializeMessage();
+                    const origMsgHash = Array.from(modifiedMessageBytes.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join('');
+                    const newMsgHash = Array.from(serializedMessage.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join('');
+                    log(`Original msg prefix: ${origMsgHash}`);
+                    log(`Signed msg prefix:   ${newMsgHash}`);
+                    if (origMsgHash !== newMsgHash) {
+                        log('WARNING: Message was recompiled! Bytes differ.', 'error');
+                    } else {
+                        log('Message preserved correctly ✓', 'success');
+                    }
+
+                    const signedTxBuffer = signedTransaction.serialize();
+                    signedTxBase64 = btoa(String.fromCharCode(...signedTxBuffer));
+                    log(`Signed tx serialized: ${signedTxBuffer.length} bytes`);
+                }
+
+                // Send via sidecar RPC proxy (for versioned tx or fallback)
+                log('Sending to Solana network via proxy...');
+
+                const rpcResponse = await fetch(`${SIDECAR_BASE}/rpc/send-transaction`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transaction: signedTxBase64,
+                        options: {
+                            skipPreflight: false,
+                            preflightCommitment: 'confirmed'
+                        }
+                    })
+                });
+
+                const rpcResult = await rpcResponse.json();
+                log(`RPC response: ${JSON.stringify(rpcResult)}`);
+
+                if (!rpcResult.success) {
+                    throw new Error(`RPC Error: ${rpcResult.error || 'Unknown error'}`);
+                }
+
+                signature = rpcResult.signature;
+                log(`Transaction sent! Signature: ${signature}`, 'success');
+                showStatus('escrowTxStatus', `
+                    <strong>✅ Deposit Submitted!</strong><br>
+                    TX: <a href="https://solscan.io/tx/${signature}" target="_blank" style="color: #60a5fa;">${signature}</a>
+                `, 'success');
+
+                // Refresh balance after confirmation
+                setTimeout(() => checkBalance(), 5000);
+
+            } catch (error) {
+                log(`Deposit failed: ${error.message}`, 'error');
+                console.error('Full error:', error);
+                showStatus('escrowTxStatus', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Withdraw from Shielded Pool
+        async function withdrawFromEscrow() {
+            try {
+                const amount = parseFloat(document.getElementById('escrowAmount').value);
+                if (amount <= 0) {
+                    throw new Error('Amount must be greater than 0');
+                }
+
+                const amountSmallestUnit = toSmallestUnit(amount);
+
+                if (amountSmallestUnit > shieldedBalance) {
+                    throw new Error(`Insufficient escrow balance. Have ${fromSmallestUnit(shieldedBalance).toFixed(6)} ${selectedToken}`);
+                }
+
+                log(`Withdrawing ${amount} ${selectedToken} (${amountSmallestUnit} smallest units) from Shielded Pool...`);
+                showStatus('escrowTxStatus', 'Creating withdrawal transaction...', 'info');
+
+                // Get unsigned transaction from ShadowPay
+                // Using /api/pool/withdraw as per docs pattern
+                const response = await fetch(`${SHADOWPAY_API}/api/pool/withdraw`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        wallet: walletAddress,
+                        amount: amountSmallestUnit,
+                        token: selectedToken,
+                        token_mint: getTokenMint()
+                    })
+                });
+
+                const result = await response.json();
+                log(`Withdraw API response keys: ${Object.keys(result).join(', ')}`);
+                log(`API result: ${JSON.stringify(result).slice(0, 300)}...`);
+                console.log('Full ShadowPay withdraw response:', result);
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                // API returns 'transaction' field (base64 encoded)
+                const txBase64 = result.transaction || result.unsigned_tx_base64;
+                if (!txBase64) {
+                    log(`Full response: ${JSON.stringify(result, null, 2)}`, 'error');
+                    throw new Error(`No transaction returned. Response: ${JSON.stringify(result)}`);
+                }
+
+                log('Transaction received from API, decoding...');
+                showStatus('escrowTxStatus', 'Please approve the transaction in your wallet...', 'info');
+
+                // Decode the transaction
+                const txBytes = Uint8Array.from(atob(txBase64), c => c.charCodeAt(0));
+                log(`Transaction bytes length: ${txBytes.length}`);
+
+                // Check first byte to determine transaction type
+                const isVersioned = txBytes[0] >= 0x80;
+                log(`Transaction type: ${isVersioned ? 'VersionedTransaction (v0)' : 'Legacy Transaction'}`);
+
+                let signedTxBase64;
+                let signature;
+
+                if (isVersioned) {
+                    // For versioned transactions
+                    log('Using VersionedTransaction flow...');
+                    const vTx = solanaWeb3.VersionedTransaction.deserialize(txBytes);
+
+                    log(`Original blockhash: ${vTx.message.recentBlockhash}`);
+                    vTx.message.recentBlockhash = result.recent_blockhash;
+                    log(`Updated blockhash: ${result.recent_blockhash.slice(0, 16)}...`);
+
+                    log('Requesting signature from Phantom...');
+                    const signedVTx = await signTransactionWithWallet(vTx);
+                    log('Transaction signed successfully');
+
+                    const signedVTxBuffer = signedVTx.serialize();
+                    signedTxBase64 = btoa(String.fromCharCode(...signedVTxBuffer));
+                    log(`Signed tx serialized: ${signedVTxBuffer.length} bytes`);
+
+                } else {
+                    // For legacy transactions - use Transaction.populate() to preserve message structure
+                    log('Using Legacy Transaction flow with Transaction.populate()...');
+
+                    const numSignatures = txBytes[0];
+                    log(`Number of signature slots: ${numSignatures}`);
+
+                    const messageStart = 1 + numSignatures * 64;
+                    const messageBytes = txBytes.slice(messageStart);
+                    log(`Message bytes length: ${messageBytes.length}`);
+
+                    // Parse to find blockhash offset
+                    let msgOffset = 3;
+                    const numAccounts = messageBytes[msgOffset];
+                    msgOffset += 1;
+                    msgOffset += numAccounts * 32;
+
+                    // Replace blockhash
+                    const newBlockhashBytes = solanaWeb3.bs58.decode(result.recent_blockhash);
+                    const modifiedMessageBytes = new Uint8Array(messageBytes);
+                    modifiedMessageBytes.set(newBlockhashBytes, msgOffset);
+
+                    // Create Message and Transaction using populate()
+                    const message = solanaWeb3.Message.from(modifiedMessageBytes);
+                    log(`Message created. Blockhash: ${message.recentBlockhash}`);
+                    const transaction = solanaWeb3.Transaction.populate(message, []);
+                    log(`Transaction populated. Blockhash: ${transaction.recentBlockhash}`);
+
+                    // Sign with Phantom
+                    log('Requesting signature from Phantom...');
+                    const signedTransaction = await signTransactionWithWallet(transaction);
+                    log('Transaction signed successfully');
+
+                    const signedTxBuffer = signedTransaction.serialize();
+                    signedTxBase64 = btoa(String.fromCharCode(...signedTxBuffer));
+                    log(`Signed tx serialized: ${signedTxBuffer.length} bytes`);
+                }
+
+                // Send via sidecar RPC proxy
+                log('Sending to Solana network via proxy...');
+
+                const rpcResponse = await fetch(`${SIDECAR_BASE}/rpc/send-transaction`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        transaction: signedTxBase64,
+                        options: {
+                            skipPreflight: false,
+                            preflightCommitment: 'confirmed'
+                        }
+                    })
+                });
+
+                const rpcResult = await rpcResponse.json();
+                log(`RPC response: ${JSON.stringify(rpcResult)}`);
+
+                if (!rpcResult.success) {
+                    throw new Error(`RPC Error: ${rpcResult.error || 'Unknown error'}`);
+                }
+
+                signature = rpcResult.signature;
+                log(`Transaction sent! Signature: ${signature}`, 'success');
+                showStatus('escrowTxStatus', `
+                    <strong>✅ Withdrawal Submitted!</strong><br>
+                    TX: <a href="https://solscan.io/tx/${signature}" target="_blank" style="color: #60a5fa;">${signature}</a>
+                `, 'success');
+
+                // Refresh balance after confirmation
+                setTimeout(() => checkBalance(), 5000);
+
+            } catch (error) {
+                log(`Withdrawal failed: ${error.message}`, 'error');
+                console.error('Full error:', error);
+                showStatus('escrowTxStatus', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Step 5a: Create Duel
+        async function createDuel() {
+            try {
+                const player2Wallet = document.getElementById('player2Wallet').value.trim();
+                const stakeAmount = parseFloat(document.getElementById('stakeAmount').value);
+
+                if (!player2Wallet || player2Wallet.length < 32) {
+                    throw new Error('Please enter a valid Player 2 wallet address');
+                }
+
+                if (stakeAmount < getMinimumAmount()) {
+                    throw new Error(`Minimum stake is ${getMinimumFormatted()} ${selectedToken}`);
+                }
+
+                const stakeSmallestUnit = toSmallestUnit(stakeAmount);
+                if (stakeSmallestUnit > shieldedBalance) {
+                    throw new Error(`Insufficient balance. Have ${fromSmallestUnit(shieldedBalance).toFixed(6)} ${selectedToken}, need ${stakeAmount} ${selectedToken}`);
+                }
+
+                log(`Creating duel: ${walletAddress.slice(0,8)}... vs ${player2Wallet.slice(0,8)}... for ${stakeAmount} ${selectedToken}`);
+                showStatus('duelStatus', 'Creating duel session...', 'info');
+
+                const response = await fetch(`${SIDECAR_BASE}/duel/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        player1Wallet: walletAddress,
+                        player2Wallet: player2Wallet,
+                        player1CharacterId: 'test-char-1',
+                        player2CharacterId: 'test-char-2',
+                        player1Name: 'Player 1',
+                        player2Name: 'Player 2',
+                        stakeAmount: stakeAmount,
+                        token: selectedToken,
+                        rules: {
+                            allowPotions: false,
+                            allowPrayer: false
+                        }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.duelId) {
+                    currentDuelId = result.duelId;
+                    currentStakeAmount = stakeAmount;
+                    log(`Duel created! ID: ${currentDuelId}`, 'success');
+
+                    showStatus('duelStatus', `
+                        <div class="copy-box">
+                            <code>${currentDuelId}</code>
+                            <button onclick="copyDuelId()">📋 Copy</button>
+                        </div>
+                        Share this Duel ID with Player 2!<br>
+                        Expires: ${new Date(result.expiresAt).toLocaleString()}
+                    `, 'success');
+
+                    setStepStatus('step5a-status', 'done');
+                    document.getElementById('lockStakeBtn').disabled = false;
+                    document.getElementById('checkDuelBtn').disabled = false;
+                    document.getElementById('createDuelBtn').disabled = true;
+                    updateCurrentDuelDisplay();
+                    updatePayoutPreview();
+                } else {
+                    throw new Error(result.error || 'Failed to create duel');
+                }
+
+            } catch (error) {
+                log(`Create duel failed: ${error.message}`, 'error');
+                showStatus('duelStatus', `Error: ${error.message}`, 'error');
+                setStepStatus('step5a-status', 'error');
+            }
+        }
+
+        // Step 5 (Join): Join existing duel
+        async function joinDuel() {
+            try {
+                const duelId = document.getElementById('joinDuelId').value.trim();
+                const stakeAmount = parseFloat(document.getElementById('joinStakeAmount').value);
+
+                if (!duelId || duelId.length !== 32) {
+                    throw new Error('Please enter a valid 32-character Duel ID');
+                }
+
+                if (stakeAmount < getMinimumAmount()) {
+                    throw new Error(`Minimum stake is ${getMinimumFormatted()} ${selectedToken}`);
+                }
+
+                const stakeSmallestUnit = toSmallestUnit(stakeAmount);
+                if (stakeSmallestUnit > shieldedBalance) {
+                    throw new Error(`Insufficient balance. Have ${fromSmallestUnit(shieldedBalance).toFixed(6)} ${selectedToken}, need ${stakeAmount} ${selectedToken}`);
+                }
+
+                log(`Joining duel: ${duelId}`);
+                showStatus('joinDuelStatus', 'Fetching duel info...', 'info');
+
+                // Fetch duel info to verify it exists
+                const response = await fetch(`${SIDECAR_BASE}/duel/${duelId}`);
+                const result = await response.json();
+
+                if (result.success && result.duel) {
+                    const duel = result.duel;
+                    currentDuelId = duelId;
+                    currentStakeAmount = stakeAmount;
+
+                    // Check if this wallet is part of the duel
+                    const stakeFromDuel = parseInt(duel.stakeAmountLamports) / 1e9;
+
+                    log(`Joined duel! Status: ${duel.status}`, 'success');
+                    log(`Players: ${duel.player1Name} vs ${duel.player2Name}`);
+                    log(`Stake: ${stakeFromDuel} ${duel.token}`);
+
+                    showStatus('joinDuelStatus', `
+                        <strong>Duel Found!</strong><br>
+                        Status: <strong>${duel.status}</strong><br>
+                        ${duel.player1Name} ${duel.player1Locked ? '🔒' : '⏳'} vs ${duel.player2Name} ${duel.player2Locked ? '🔒' : '⏳'}<br>
+                        Stake: ${stakeFromDuel} ${duel.token}<br>
+                        <span style="color: #4ade80;">Ready to lock your stake!</span>
+                    `, 'success');
+
+                    setStepStatus('step5join-status', 'done');
+                    document.getElementById('lockStakeBtn').disabled = false;
+                    document.getElementById('checkDuelBtn').disabled = false;
+                    document.getElementById('joinDuelBtn').disabled = true;
+                    updateCurrentDuelDisplay();
+                    updatePayoutPreview();
+                } else {
+                    throw new Error(result.error || 'Duel not found');
+                }
+
+            } catch (error) {
+                log(`Join duel failed: ${error.message}`, 'error');
+                showStatus('joinDuelStatus', `Error: ${error.message}`, 'error');
+                setStepStatus('step5join-status', 'error');
+            }
+        }
+
+        // Step 6: Lock Stake using ShadowWire SDK Transfer
+        async function lockStake() {
+            try {
+                // Use the stake amount from duel creation/join
+                const stakeAmount = currentStakeAmount || parseFloat(document.getElementById('stakeAmount').value);
+
+                if (!currentDuelId) {
+                    throw new Error('No duel selected. Create or join a duel first.');
+                }
+
+                if (!shadowWireClient) {
+                    throw new Error('ShadowWire SDK not initialized. Complete Step 2 first.');
+                }
+
+                // Get escrow wallet from service info
+                log('Fetching escrow wallet address...');
+                const serviceInfoResp = await fetch(`${SIDECAR_BASE}/duel/service-info`);
+                const serviceInfo = await serviceInfoResp.json();
+                if (!serviceInfo.success || !serviceInfo.escrowWallet) {
+                    throw new Error('Could not get escrow wallet address');
+                }
+                const escrowWallet = serviceInfo.escrowWallet;
+                log(`Escrow wallet: ${escrowWallet.slice(0, 8)}...`);
+
+                log('Initiating ShadowWire transfer to escrow...');
+                showStatus('lockStatus', 'Please sign the transfer in your wallet...', 'info');
+
+                // Create signMessage wrapper for Phantom
+                const signMessage = async (message) => {
+                    const encodedMessage = typeof message === 'string'
+                        ? new TextEncoder().encode(message)
+                        : message;
+                    const signatureResponse = await signMessageWithWallet(encodedMessage);
+                    return signatureResponse.signature;
+                };
+
+                // Convert to smallest unit for proof generation
+                const stakeSmallestUnit = toSmallestUnit(stakeAmount);
+
+                log(`Generating ZK range proof for ${stakeAmount} ${selectedToken} (${stakeSmallestUnit} smallest units)...`);
+                showStatus('lockStatus', 'Generating ZK proof (this may take a moment)...', 'info');
+
+                // Generate client-side ZK proof using WASM
+                let proof;
+                try {
+                    proof = await ShadowWire.generateRangeProof(stakeSmallestUnit, 64);
+                    log('ZK proof generated successfully!', 'success');
+                    log(`Proof commitment: ${proof.commitment ? proof.commitment.slice(0, 20) + '...' : 'N/A'}`);
+                } catch (proofError) {
+                    log(`Proof generation failed: ${proofError.message}`, 'error');
+                    throw new Error(`Failed to generate ZK proof: ${proofError.message}`);
+                }
+
+                // Use ShadowWire SDK to transfer to escrow WITH client proof
+                log(`Calling shadowWireClient.transferWithClientProofs:`, 'info');
+                log(`  sender: ${walletAddress}`, 'info');
+                log(`  recipient (escrow): ${escrowWallet}`, 'info');
+                log(`  amount: ${stakeAmount} ${selectedToken}`, 'info');
+
+                showStatus('lockStatus', 'Please sign the transfer in your wallet...', 'info');
+
+                const transferResult = await shadowWireClient.transferWithClientProofs({
+                    sender: walletAddress,
+                    recipient: escrowWallet,
+                    amount: stakeAmount,
+                    token: selectedToken,
+                    type: 'internal',
+                    customProof: proof,
+                    wallet: { signMessage }
+                });
+
+                log('Transfer call completed', 'success');
+                log(`Full transfer result: ${JSON.stringify(transferResult, null, 2)}`);
+
+                // Get transaction signature from result - FAIL if no valid signature
+                const txSignature = transferResult.signature ||
+                                   transferResult.txSignature ||
+                                   transferResult.tx ||
+                                   transferResult.tx_signature ||
+                                   transferResult.transfer_id;
+
+                if (!txSignature || txSignature === 'undefined' || txSignature === 'null') {
+                    throw new Error(`Transfer failed - no transaction signature returned. Result: ${JSON.stringify(transferResult)}`);
+                }
+
+                log(`Transaction signature: ${txSignature}`, 'success');
+
+                showStatus('lockStatus', 'Notifying sidecar of stake lock...', 'info');
+
+                // Notify sidecar that we've locked our stake
+                const response = await fetch(`${SIDECAR_BASE}/duel/lock-stake`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        duelId: currentDuelId,
+                        playerWallet: walletAddress,
+                        paymentProof: JSON.stringify({ txSignature, timestamp: Date.now() })
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const finalTxSig = result.txSignature || txSignature;
+                    const txParts = parseMultiTxSignatures(finalTxSig);
+                    log(`Stake locked! (${txParts.length} transaction${txParts.length > 1 ? 's' : ''})`, 'success');
+                    txParts.forEach(tx => log(`  ${tx.label}: ${tx.signature.slice(0, 20)}...`, 'success'));
+                    log(`Both players locked: ${result.bothLocked}`, result.bothLocked ? 'success' : 'info');
+
+                    let bothLockedMsg = result.bothLocked
+                        ? '<span style="color: #4ade80; font-size: 18px;">🎮 BOTH PLAYERS READY - DUEL CAN START!</span>'
+                        : '<span style="color: #9ca3af;">⏳ Waiting for opponent to lock stake...</span>';
+
+                    showStatus('lockStatus', `
+                        <strong>✅ Your Stake Locked!</strong><br>
+                        <span style="color: #888; font-size: 12px;">ZK Shielded Transfer:</span>
+                        ${renderTxLinksHtml(finalTxSig)}
+                        <div style="margin-top: 8px;">Duel Status: ${result.duelStatus}</div>
+                        ${bothLockedMsg}
+                    `, 'success');
+
+                    setStepStatus('step6-status', 'done');
+                    document.getElementById('lockStakeBtn').disabled = true;
+
+                    // Refresh balances
+                    refreshAllBalances();
+
+                    // Auto-refresh duel status
+                    setTimeout(() => checkDuelStatus(), 1000);
+                } else {
+                    throw new Error(result.error || 'Failed to record stake lock');
+                }
+
+            } catch (error) {
+                log(`Lock stake failed: ${error.message}`, 'error');
+                console.error('Full error:', error);
+                showStatus('lockStatus', `Error: ${error.message}`, 'error');
+                setStepStatus('step6-status', 'error');
+            }
+        }
+
+        // Step 7: Check Duel Status
+        async function checkDuelStatus() {
+            try {
+                if (!currentDuelId) {
+                    throw new Error('No duel created yet');
+                }
+
+                log(`Checking duel status: ${currentDuelId}`);
+
+                const response = await fetch(`${SIDECAR_BASE}/duel/${currentDuelId}`);
+                const result = await response.json();
+
+                if (result.success && result.duel) {
+                    const duel = result.duel;
+                    log(`Duel status: ${duel.status}`, 'success');
+
+                    const bothLocked = duel.player1Locked && duel.player2Locked;
+                    let statusColor = '#6b7280';
+                    if (duel.status === 'ACTIVE') statusColor = '#4ade80';
+                    if (duel.status === 'SETTLED' || duel.status === 'REFUNDED') statusColor = '#9ca3af';
+                    if (duel.status === 'EXPIRED' || duel.status === 'FAILED') statusColor = '#ef4444';
+
+                    showStatus('duelStatusResult', `
+                        <strong>Duel Status</strong><br>
+                        ID: <code>${duel.duelId}</code><br>
+                        Status: <strong style="color: ${statusColor};">${duel.status}</strong><br>
+                        Player 1 (${duel.player1Name}): ${duel.player1Locked ? '🔒 Locked' : '⏳ Pending'}<br>
+                        Player 2 (${duel.player2Name}): ${duel.player2Locked ? '🔒 Locked' : '⏳ Pending'}<br>
+                        Stake: ${parseInt(duel.stakeAmountLamports) / 1e9} ${duel.token}<br>
+                        ${bothLocked ? '<span style="color: #4ade80; font-weight: bold;">✅ Both players ready!</span>' : '<span style="color: #9ca3af;">⏳ Waiting for both players...</span>'}<br>
+                        ${duel.winnerStealthId ? `Winner: ${duel.winnerStealthId}` : ''}
+                    `, 'info');
+
+                    setStepStatus('step7-status', 'done');
+
+                    // Enable settlement buttons if duel is ACTIVE
+                    if (duel.status === 'ACTIVE' && bothLocked) {
+                        document.getElementById('settleBtn').disabled = false;
+                        document.getElementById('refundBtn').disabled = false;
+                        updatePayoutPreview();
+                    }
+                } else {
+                    throw new Error(result.error || 'Failed to get duel status');
+                }
+
+            } catch (error) {
+                log(`Check status failed: ${error.message}`, 'error');
+                showStatus('duelStatusResult', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Update payout preview when stake changes
+        function updatePayoutPreview() {
+            const stakeAmount = currentStakeAmount || parseFloat(document.getElementById('stakeAmount').value) || 0.05;
+            const totalPot = stakeAmount * 2;
+            const houseFeePercent = 2; // 2% house fee
+            const houseFee = totalPot * houseFeePercent / 100;
+            const winnerPayout = totalPot - houseFee;
+
+            document.getElementById('payoutPreview').innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <span style="color: #888;">Stake per player:</span><br>
+                        <span style="color: #60a5fa; font-size: 14px;">${stakeAmount.toFixed(4)} ${selectedToken}</span>
+                    </div>
+                    <div>
+                        <span style="color: #888;">Total pot:</span><br>
+                        <span style="color: #9ca3af; font-size: 14px;">${totalPot.toFixed(4)} ${selectedToken}</span>
+                    </div>
+                    <div>
+                        <span style="color: #888;">House fee (${houseFeePercent}%):</span><br>
+                        <span style="color: #9ca3af; font-size: 14px;">${houseFee.toFixed(6)} ${selectedToken}</span>
+                    </div>
+                    <div>
+                        <span style="color: #888;">Winner receives:</span><br>
+                        <span style="color: #4ade80; font-size: 14px; font-weight: bold;">${winnerPayout.toFixed(6)} ${selectedToken}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Step 8: Simulate Settlement
+        async function simulateSettle() {
+            try {
+                if (!currentDuelId) {
+                    throw new Error('No duel created yet');
+                }
+
+                const winnerChoice = document.getElementById('winnerSelect').value;
+                const winnerWallet = winnerChoice === 'player1'
+                    ? walletAddress
+                    : document.getElementById('player2Wallet').value;
+
+                if (!winnerWallet) {
+                    throw new Error('Winner wallet not available');
+                }
+
+                log(`Settling duel ${currentDuelId}...`);
+                log(`Winner: ${winnerChoice} (${winnerWallet.slice(0, 8)}...)`);
+                showStatus('settlementStatus', 'Processing settlement...', 'info');
+
+                // Call settle endpoint (normally done by game server)
+                const response = await fetch(`${SIDECAR_BASE}/duel/settle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        duelId: currentDuelId,
+                        winnerWallet: winnerWallet,
+                        serverSignature: 'test-server-signature-' + Date.now(), // Mock signature for testing
+                        combatSummary: {
+                            totalTicks: 120,
+                            player1DamageDealt: winnerChoice === 'player1' ? 100 : 75,
+                            player2DamageDealt: winnerChoice === 'player2' ? 100 : 75,
+                            winReason: 'death'
+                        }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const duelToken = result.token || selectedToken;
+                    const tokenDecimals = TOKEN_DECIMALS[duelToken] || 9;
+                    const winnerPayoutDisplay = result.winnerPayoutLamports
+                        ? (parseInt(result.winnerPayoutLamports) / Math.pow(10, tokenDecimals)).toFixed(6)
+                        : 'N/A';
+                    const treasuryFeeDisplay = result.treasuryFeeLamports
+                        ? (parseInt(result.treasuryFeeLamports) / Math.pow(10, tokenDecimals)).toFixed(6)
+                        : 'N/A';
+
+                    log('Settlement successful!', 'success');
+                    log(`Winner payout: ${winnerPayoutDisplay} ${duelToken}`, 'success');
+                    log(`House fee: ${treasuryFeeDisplay} ${duelToken}`, 'info');
+
+                    // Build transaction links section
+                    const solscanBase = 'https://solscan.io/tx/';
+                    let txLinksHtml = '<div style="margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px;">';
+                    txLinksHtml += '<strong style="color: #aaa; font-size: 12px;">TRANSACTION DETAILS</strong><br><br>';
+
+                    // Commitment TX (accountability proof)
+                    if (result.commitmentTxSignature) {
+                        txLinksHtml += `
+                            <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <span style="color: #9ca3af;">🔒 Accountability Commitment</span><br>
+                                <span style="font-size: 11px; color: #888;">Hash posted on-chain BEFORE payout (fraud proof)</span><br>
+                                <div style="margin-left: 10px; margin-top: 5px;">
+                                    <a href="${solscanBase}${result.commitmentTxSignature}" target="_blank" style="color: #60a5fa; word-break: break-all; font-size: 12px;">
+                                        ${result.commitmentTxSignature}
+                                    </a>
+                                </div>
+                            </div>`;
+                        if (result.commitmentHash) {
+                            txLinksHtml += `<div style="font-size: 10px; color: #666; margin-bottom: 10px; margin-top: -8px;">Hash: ${result.commitmentHash.slice(0, 32)}...</div>`;
+                        }
+                    }
+
+                    // Winner payout TX (may contain multiple TXs)
+                    if (result.winnerTxSignature) {
+                        txLinksHtml += `
+                            <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <span style="color: #4ade80;">💰 Winner Payout (${winnerPayoutDisplay} ${duelToken})</span><br>
+                                <span style="font-size: 11px; color: #888;">ZK shielded transfer to winner</span>
+                                ${renderTxLinksHtml(result.winnerTxSignature, solscanBase)}
+                            </div>`;
+                    }
+
+                    // Treasury fee TX (may contain multiple TXs)
+                    if (result.treasuryTxSignature) {
+                        txLinksHtml += `
+                            <div style="margin-bottom: 5px;">
+                                <span style="color: #9ca3af;">🏦 House Fee (${treasuryFeeDisplay} ${duelToken})</span><br>
+                                <span style="font-size: 11px; color: #888;">ZK shielded transfer to treasury</span>
+                                ${renderTxLinksHtml(result.treasuryTxSignature, solscanBase)}
+                            </div>`;
+                    }
+
+                    txLinksHtml += '</div>';
+
+                    showStatus('settlementStatus', `
+                        <strong style="color: #4ade80; font-size: 18px;">🎉 DUEL SETTLED!</strong><br><br>
+                        <div style="margin-bottom: 10px;">
+                            <strong>Winner:</strong> ${winnerChoice === 'player1' ? 'Player 1 (You)' : 'Player 2'}<br>
+                            <strong>Winner Payout:</strong> <span style="color: #4ade80; font-size: 16px;">${winnerPayoutDisplay} ${duelToken}</span><br>
+                            <strong>House Fee:</strong> <span style="color: #9ca3af;">${treasuryFeeDisplay} ${duelToken}</span>
+                        </div>
+                        ${txLinksHtml}
+                    `, 'success');
+
+                    setStepStatus('step8-status', 'done');
+                    document.getElementById('settleBtn').disabled = true;
+                    document.getElementById('refundBtn').disabled = true;
+
+                    // Refresh balances after settlement
+                    setTimeout(() => {
+                        checkDuelStatus();
+                        refreshAllBalances();
+                    }, 2000);
+                } else {
+                    throw new Error(result.error || 'Settlement failed');
+                }
+
+            } catch (error) {
+                log(`Settlement failed: ${error.message}`, 'error');
+                console.error('Settlement error:', error);
+                showStatus('settlementStatus', `Error: ${error.message}`, 'error');
+                setStepStatus('step8-status', 'error');
+            }
+        }
+
+        // Simulate Refund (timeout/cancellation)
+        async function simulateRefund() {
+            try {
+                if (!currentDuelId) {
+                    throw new Error('No duel created yet');
+                }
+
+                log(`Refunding duel ${currentDuelId}...`);
+                showStatus('settlementStatus', 'Processing refund...', 'info');
+
+                // Call refund endpoint
+                const response = await fetch(`${SIDECAR_BASE}/duel/refund`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        duelId: currentDuelId,
+                        reason: 'cancelled',
+                        serverSignature: 'test-server-signature-' + Date.now()
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    log('Refund successful!', 'success');
+
+                    let txListHtml = '';
+                    if (result.refundTxSignatures && result.refundTxSignatures.length > 0) {
+                        result.refundTxSignatures.forEach((txString, i) => {
+                            txListHtml += `<div style="margin-top: 8px;"><strong>Player ${i + 1} Refund:</strong></div>`;
+                            txListHtml += renderTxLinksHtml(txString);
+                        });
+                    } else {
+                        txListHtml = '<div style="color: #888;">No transactions (mock mode)</div>';
+                    }
+
+                    showStatus('settlementStatus', `
+                        <strong style="color: #9ca3af;">↩️ DUEL REFUNDED</strong><br><br>
+                        <strong>Reason:</strong> Cancelled<br>
+                        <div style="margin-top: 10px;"><strong>Refund Transactions:</strong></div>
+                        ${txListHtml}
+                    `, 'info');
+
+                    setStepStatus('step8-status', 'done');
+                    document.getElementById('settleBtn').disabled = true;
+                    document.getElementById('refundBtn').disabled = true;
+
+                    // Refresh status
+                    setTimeout(() => {
+                        checkDuelStatus();
+                        refreshAllBalances();
+                    }, 2000);
+                } else {
+                    throw new Error(result.error || 'Refund failed');
+                }
+
+            } catch (error) {
+                log(`Refund failed: ${error.message}`, 'error');
+                console.error('Refund error:', error);
+                showStatus('settlementStatus', `Error: ${error.message}`, 'error');
+                setStepStatus('step8-status', 'error');
+            }
+        }
+
+        // Auto-init
+        window.addEventListener('load', () => {
+            log('Duel Stake Test Page loaded');
+            log(`Sidecar URL: ${SIDECAR_BASE}`);
+            log(`ShadowWire API: ${SHADOWWIRE_API}`);
+            log(`Service Wallet: ${SERVICE_WALLET.slice(0, 8)}...`);
+
+            // Pre-fill player 2 with test wallet
+            document.getElementById('player2Wallet').value = TEST_WALLETS.player2;
+            log(`Pre-filled Player 2 with test wallet: ${TEST_WALLETS.player2.slice(0, 8)}...`);
+
+            // Check if Solana Web3 loaded from CDN
+            if (typeof solanaWeb3 !== 'undefined') {
+                log('Solana Web3.js loaded (CDN)');
+            } else {
+                log('Solana Web3.js not loaded - check network/CDN', 'error');
+            }
+
+            // Detect available wallets
+            setTimeout(() => {
+                detectWallets();
+            }, 500); // Small delay to ensure wallet extensions are injected
+
+            // Check if ShadowWire SDK loaded
+            if (typeof ShadowWire !== 'undefined') {
+                log('ShadowWire SDK loaded');
+                if (ShadowWire.isWASMSupported && ShadowWire.isWASMSupported()) {
+                    log('WebAssembly supported');
+                } else {
+                    log('WebAssembly check pending (will verify on init)', 'info');
+                }
+            } else {
+                log('ShadowWire SDK not loaded - check if shadowwire-browser.js exists', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+/* Common styles for Alerith test pages */
+
+* {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: #121212;
+    color: #e0e0e0;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 60px;
+}
+
+.container {
+    max-width: 500px;
+    width: 100%;
+}
+
+.container.wide {
+    max-width: 800px;
+}
+
+h1 {
+    text-align: center;
+    color: #e0e0e0;
+    margin-bottom: 30px;
+    font-size: 24px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+
+/* Cards */
+.card {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+.card h2 {
+    margin: 0 0 20px 0;
+    color: #e0e0e0;
+    font-size: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 12px;
+}
+
+/* Buttons */
+button {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    width: 100%;
+}
+
+button:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+button.secondary {
+    background: #4b5563;
+}
+
+button.secondary:hover:not(:disabled) {
+    background: #374151;
+}
+
+button.success {
+    background: #16a34a;
+}
+
+button.success:hover:not(:disabled) {
+    background: #15803d;
+}
+
+/* Inputs */
+input, select {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    color: #e0e0e0;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-size: 16px;
+    width: 100%;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+select option {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+/* Status messages */
+.status {
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin: 15px 0;
+    font-size: 14px;
+}
+
+.status.info {
+    background: #1e3a5f;
+    border: 1px solid #2563eb;
+}
+
+.status.success {
+    background: #14532d;
+    border: 1px solid #16a34a;
+}
+
+.status.error {
+    background: #450a0a;
+    border: 1px solid #dc2626;
+}
+
+.status.warning {
+    background: #422006;
+    border: 1px solid #d97706;
+}
+
+/* Wallet buttons */
+.wallet-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.wallet-buttons button {
+    width: auto;
+    flex: 1;
+    min-width: 100px;
+}
+
+.connected {
+    color: #4ade80;
+    font-size: 14px;
+    padding: 10px;
+    background: rgba(74, 222, 128, 0.1);
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* Form rows */
+.amount-row, .input-row {
+    margin-bottom: 20px;
+}
+
+.amount-row label, .input-row label {
+    display: block;
+    margin-bottom: 8px;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.input-row .hint {
+    color: #666;
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+.balance-info {
+    color: #4ade80;
+    font-size: 14px;
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+/* Step indicators */
+.step-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.step-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.step-dot.done {
+    background: #16a34a;
+}
+
+.step-dot.active {
+    background: #2563eb;
+}
+
+.step-label {
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+/* Links */
+a {
+    color: #60a5fa;
+}
+
+/* Notes */
+.important-note {
+    background: rgba(71, 85, 105, 0.25);
+    border: 1px solid rgba(100, 116, 139, 0.4);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+/* Flex utilities */
+.flex-row {
+    display: flex;
+    gap: 10px;
+}
+
+.flex-row > * {
+    flex: 1;
+}

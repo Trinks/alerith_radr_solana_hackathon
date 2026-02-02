@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Duel Settlement</title>
+    <link rel="stylesheet" href="/test/css/common.css">
+    <style>
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .result-row:last-child { border-bottom: none; }
+        .result-label { color: #888; }
+        .result-value { color: #e0e0e0; text-align: right; }
+        .result-value.success { color: #4ade80; }
+        .result-value.error { color: #ef4444; }
+        details { margin-top: 20px; }
+        summary { cursor: pointer; color: #888; font-size: 13px; }
+        pre { margin-top: 10px; padding: 15px; background: #0a0a0a; border-radius: 8px; overflow-x: auto; font-size: 12px; color: #888; }
+        code { font-size: 11px; color: #666; display: block; margin-top: 10px; word-break: break-all; }
+        .solscan-link { display: block; margin-top: 20px; text-align: center; padding: 12px; background: rgba(96, 165, 250, 0.1); border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Verify Settlement</h1>
+        <p class="subtitle">Check that any duel settlement was provably fair</p>
+
+        <div class="card">
+            <input type="text" id="duelId" placeholder="Enter Duel ID" autofocus>
+            <button onclick="verify()" style="margin-top: 15px;">Verify Settlement</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script src="/test/js/common.js"></script>
+    <script>
+        // Check URL for duel ID parameter
+        const params = new URLSearchParams(window.location.search);
+        const urlDuelId = params.get('duelId') || params.get('id');
+        if (urlDuelId) {
+            document.getElementById('duelId').value = urlDuelId;
+            verify();
+        }
+
+        async function verify() {
+            const duelId = document.getElementById('duelId').value.trim();
+            if (!duelId) {
+                document.getElementById('result').innerHTML = '<div class="status error">Please enter a Duel ID</div>';
+                return;
+            }
+
+            document.getElementById('result').innerHTML = '<div class="status info">Verifying...</div>';
+
+            try {
+                const response = await fetch(`${SIDECAR_BASE}/duel/verify/${duelId}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    document.getElementById('result').innerHTML = `<div class="status error">Error: ${data.error}</div>`;
+                    return;
+                }
+
+                const v = data.verification;
+                const c = data.commitment;
+                const o = data.onChain;
+
+                let html = `<div class="card">
+                    <div class="result-row">
+                        <span class="result-label">Status</span>
+                        <span class="result-value ${c.hashMatches && o.posted ? 'success' : 'error'}">${c.hashMatches && o.posted ? '✓ Verified' : '✗ Failed'}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Duel ID</span>
+                        <span class="result-value">${v.duelId}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Winner</span>
+                        <span class="result-value">${v.winnerStealthId.slice(0, 16)}...</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Loser</span>
+                        <span class="result-value">${v.loserStealthId.slice(0, 16)}...</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Timestamp</span>
+                        <span class="result-value">${v.timestampHuman}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Hash Matches</span>
+                        <span class="result-value ${c.hashMatches ? 'success' : 'error'}">${c.hashMatches ? '✓ Yes' : '✗ No'}</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">On-Chain</span>
+                        <span class="result-value ${o.posted ? 'success' : 'error'}">${o.posted ? '✓ Posted' : '✗ Not posted'}</span>
+                    </div>`;
+
+                if (o.solscanUrl) {
+                    html += `<a href="${o.solscanUrl}" target="_blank" class="solscan-link">View On-Chain Proof on Solscan →</a>`;
+                }
+
+                html += `<details>
+                        <summary>Manual Verification</summary>
+                        <p style="margin-top: 10px; color: #888; font-size: 12px;">Hash this raw data yourself and compare to the on-chain memo:</p>
+                        <pre>${c.rawData}</pre>
+                        <code>echo -n '${c.rawData}' | sha256sum</code>
+                        <p style="margin-top: 15px; color: #888; font-size: 12px;"><strong>Expected hash:</strong> ${c.hash}</p>
+                    </details>
+                </div>`;
+
+                document.getElementById('result').innerHTML = html;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+            }
+        }
+
+        document.getElementById('duelId').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verify();
+        });
+    </script>
+</body>
+</html>

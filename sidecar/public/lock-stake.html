@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lock Stake for Duel</title>
+    <link rel="stylesheet" href="/test/css/common.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Lock Stake for Duel</h1>
+
+        <div class="important-note">
+            Enter the Duel ID and stake amount that matches your Unity game. The stake will be transferred to the escrow using ZK proof.<br><br>
+            <span style="color:#60a5fa;">Tip:</span> Unity can link directly with <code style="background:#1e1e2e;padding:2px 6px;border-radius:4px;">#duelId=xxx</code> to pre-fill the ID.
+        </div>
+
+        <!-- Step 1: Connect Wallet -->
+        <div class="card" id="step1Card">
+            <div class="step-indicator">
+                <div class="step-dot active" id="step1Dot">1</div>
+                <div class="step-label">Connect Wallet</div>
+            </div>
+            <div id="walletButtons" class="wallet-buttons"></div>
+            <div id="walletConnected" class="connected" style="display: none;"></div>
+            <div id="noWalletMsg" style="display: none; color: #9ca3af; margin-top: 10px; font-size: 13px;">
+                No wallet detected. Install <a href="https://phantom.app" target="_blank">Phantom</a> or <a href="https://solflare.com" target="_blank">Solflare</a>
+            </div>
+        </div>
+
+        <!-- Step 2: Initialize & Auth -->
+        <div class="card" id="step2Card" style="display: none;">
+            <div class="step-indicator">
+                <div class="step-dot" id="step2Dot">2</div>
+                <div class="step-label">Initialize ShadowWire</div>
+            </div>
+            <button id="initBtn" onclick="initAndAuth()">Initialize & Authenticate</button>
+            <div id="initStatus"></div>
+        </div>
+
+        <!-- Step 3: Lock Stake -->
+        <div class="card" id="step3Card" style="display: none;">
+            <div class="step-indicator">
+                <div class="step-dot" id="step3Dot">3</div>
+                <div class="step-label">Lock Stake</div>
+            </div>
+
+            <div class="balance-info" id="balanceInfo">Loading balance...</div>
+
+            <div class="input-row">
+                <label>Duel ID</label>
+                <input type="text" id="duelId" placeholder="Enter 32-character duel ID from Unity">
+                <div class="hint">Get this from the Unity game when duel is created</div>
+            </div>
+
+            <div class="input-row">
+                <label>Token</label>
+                <select id="tokenSelect" onchange="handleTokenChange()">
+                    <option value="SOL">SOL</option>
+                    <option value="USD1">USD1</option>
+                    <option value="RADR">RADR</option>
+                </select>
+                <div class="hint">Select the token to stake (must match Unity)</div>
+            </div>
+
+            <div class="input-row">
+                <label>Stake Amount (<span id="tokenLabel">SOL</span>) - min: <span id="minLabel">0.1</span></label>
+                <input type="number" id="stakeAmount" value="0.1" min="0.1" step="0.01" placeholder="0.1">
+                <div class="hint">Must match the stake amount in Unity</div>
+            </div>
+
+            <button id="lockBtn" onclick="doLockStake()">Generate ZK Proof & Lock Stake</button>
+            <div id="lockStatus"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js"></script>
+    <script src="/test/shadowwire-browser.js"></script>
+    <script src="/test/js/common.js"></script>
+    <script>
+        let shadowWireClient = null;
+        let wasmInitialized = false;
+        let shieldedBalance = 0;
+        let escrowWallet = null;
+
+        function handleTokenChange() {
+            onTokenChange('tokenSelect', { onTokenChange: () => updateBalance() });
+        }
+
+        function updateBalance() {
+            if (walletAddress) {
+                fetchBalance(walletAddress, (balance) => {
+                    shieldedBalance = balance;
+                    const display = fromSmallestUnit(balance).toFixed(6);
+                    document.getElementById('balanceInfo').textContent = `Shielded Balance: ${display} ${selectedToken}`;
+                });
+            }
+        }
+
+        function onWalletConnected(address, provider) {
+            document.getElementById('step1Dot').classList.add('done');
+            document.getElementById('step2Card').style.display = 'block';
+            document.getElementById('step2Dot').classList.add('active');
+        }
+
+        async function fetchEscrowWallet() {
+            try {
+                const response = await fetch(`${SIDECAR_BASE}/duel/service-info`);
+                const result = await response.json();
+                if (result.success && result.escrowWallet) {
+                    escrowWallet = result.escrowWallet;
+                }
+            } catch (e) {
+                console.error('Could not fetch escrow wallet:', e);
+            }
+        }
+
+        async function initAndAuth() {
+            try {
+                document.getElementById('initBtn').disabled = true;
+                showStatus('initStatus', 'Initializing ShadowWire SDK + WASM...', 'info');
+
+                if (typeof ShadowWire === 'undefined') throw new Error('ShadowWire SDK not loaded');
+                if (!ShadowWire.isWASMSupported()) throw new Error('WebAssembly not supported');
+
+                await ShadowWire.initWASM('/wasm/settler_wasm_bg.wasm');
+                shadowWireClient = new ShadowWire.ShadowWireClient();
+                wasmInitialized = true;
+
+                showStatus('initStatus', 'Please sign the authentication message...', 'info');
+
+                const message = `Authenticate with ShadowWire\nWallet: ${walletAddress}\nTimestamp: ${Date.now()}`;
+                const encodedMessage = new TextEncoder().encode(message);
+                const signatureResponse = await connectedProvider.wallet.signMessage(encodedMessage);
+                const signature = btoa(String.fromCharCode(...signatureResponse.signature));
+
+                window.walletAuth = { wallet: walletAddress, signature, message,
+                    signMessage: async (msg) => {
+                        const encoded = new TextEncoder().encode(msg);
+                        const resp = await connectedProvider.wallet.signMessage(encoded);
+                        return btoa(String.fromCharCode(...resp.signature));
+                    }
+                };
+
+                showStatus('initStatus', 'Ready to lock stake!', 'success');
+                document.getElementById('step2Dot').classList.remove('active');
+                document.getElementById('step2Dot').classList.add('done');
+                document.getElementById('step3Card').style.display = 'block';
+                document.getElementById('step3Dot').classList.add('active');
+
+                updateBalance();
+                fetchEscrowWallet();
+            } catch (error) {
+                showStatus('initStatus', `Error: ${error.message}`, 'error');
+                document.getElementById('initBtn').disabled = false;
+            }
+        }
+
+        async function doLockStake() {
+            try {
+                const duelId = document.getElementById('duelId').value.trim();
+                const stakeAmount = parseFloat(document.getElementById('stakeAmount').value);
+
+                if (!duelId || duelId.length !== 32) throw new Error('Please enter a valid 32-character Duel ID');
+                if (stakeAmount < getMinimum()) throw new Error(`Minimum stake is ${getMinimumFormatted()} ${selectedToken}`);
+                if (!escrowWallet) throw new Error('Escrow wallet not loaded. Refresh page.');
+
+                const stakeSmallestUnit = toSmallestUnit(stakeAmount);
+                if (stakeSmallestUnit > shieldedBalance) throw new Error(`Insufficient balance. Have ${fromSmallestUnit(shieldedBalance).toFixed(6)} ${selectedToken}`);
+
+                document.getElementById('lockBtn').disabled = true;
+                showStatus('lockStatus', 'Generating ZK range proof...', 'info');
+
+                // Generate ZK proof
+                const proof = await ShadowWire.generateRangeProof(stakeSmallestUnit, 64);
+
+                showStatus('lockStatus', 'Please sign the transfer in your wallet...', 'info');
+
+                // Create signMessage wrapper
+                const signMessage = async (message) => {
+                    const encodedMessage = typeof message === 'string' ? new TextEncoder().encode(message) : message;
+                    const signatureResponse = await connectedProvider.wallet.signMessage(encodedMessage);
+                    return signatureResponse.signature;
+                };
+
+                // Transfer to escrow with ZK proof
+                const transferResult = await shadowWireClient.transferWithClientProofs({
+                    sender: walletAddress,
+                    recipient: escrowWallet,
+                    amount: stakeAmount,
+                    token: selectedToken,
+                    type: 'internal',
+                    customProof: proof,
+                    wallet: { signMessage }
+                });
+
+                const txSignature = transferResult.signature || transferResult.txSignature || transferResult.tx || transferResult.tx_signature || transferResult.transfer_id;
+                if (!txSignature || txSignature === 'undefined') throw new Error('Transfer failed - no signature returned');
+
+                showStatus('lockStatus', 'Notifying sidecar of stake lock...', 'info');
+
+                // Notify sidecar
+                const response = await fetch(`${SIDECAR_BASE}/duel/lock-stake`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        duelId: duelId,
+                        playerWallet: walletAddress,
+                        paymentProof: JSON.stringify({ txSignature, timestamp: Date.now() })
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const txDisplay = result.txSignature || txSignature;
+                    const txLinks = parseTxLinks(txDisplay);
+
+                    let resultHtml = `<strong>Stake Locked Successfully!</strong><br><br>`;
+                    resultHtml += `<span style="color:#888;">Duel Status: ${result.duelStatus}</span><br>`;
+                    resultHtml += `<span style="color:#888;">Both Players Ready: ${result.bothLocked ? 'Yes' : 'No'}</span><br><br>`;
+                    resultHtml += `<span style="color:#888;font-size:12px;">ZK Transfer:</span><br>`;
+                    resultHtml += txLinks;
+
+                    if (result.bothLocked) {
+                        resultHtml += `<br><br><span style="color:#4ade80;font-size:16px;">Both players ready - Duel can start!</span>`;
+                    } else {
+                        resultHtml += `<br><br><span style="color:#9ca3af;">Waiting for opponent...</span>`;
+                    }
+
+                    showStatus('lockStatus', resultHtml, 'success');
+                    document.getElementById('step3Dot').classList.remove('active');
+                    document.getElementById('step3Dot').classList.add('done');
+                    updateBalance();
+                } else {
+                    throw new Error(result.error || 'Failed to record stake lock');
+                }
+            } catch (error) {
+                showStatus('lockStatus', `Error: ${error.message}`, 'error');
+                document.getElementById('lockBtn').disabled = false;
+            }
+        }
+
+        function parseTxLinks(txString) {
+            if (!txString) return '';
+            const txMatches = txString.match(/TX\d+:([A-Za-z0-9]+)/g);
+            if (txMatches && txMatches.length > 0) {
+                return txMatches.map(tx => {
+                    const [label, sig] = tx.split(':');
+                    return `<div style="margin-left:10px;"><span style="color:#888;font-size:11px;">${label}:</span> <a href="https://solscan.io/tx/${sig}" target="_blank" style="color:#60a5fa;font-size:11px;">${sig.slice(0,20)}...</a></div>`;
+                }).join('');
+            }
+            return `<div style="margin-left:10px;"><a href="https://solscan.io/tx/${txString}" target="_blank" style="color:#60a5fa;font-size:12px;">${txString.slice(0,30)}...</a></div>`;
+        }
+
+        // Read duel ID from URL fragment (e.g., #duelId=abc123)
+        function loadDuelIdFromUrl() {
+            const hash = window.location.hash.slice(1);
+            const params = new URLSearchParams(hash);
+            const duelId = params.get('duelId') || params.get('sessionId') || params.get('id');
+            if (duelId) {
+                document.getElementById('duelId').value = duelId;
+                const hint = document.querySelector('#duelId').parentElement.querySelector('.hint');
+                if (hint) hint.innerHTML = `<span style="color:#4ade80;">Pre-filled from URL</span>`;
+            }
+        }
+
+        window.onload = function() {
+            detectWallets('walletButtons', onWalletConnected);
+            loadDuelIdFromUrl();
+        };
+    </script>
+</body>
+</html>
