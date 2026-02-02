@@ -210,3 +210,4 @@ Built for Solana Privacy Hack 2026
 
 - [Shadowwire SDK](https://github.com/Radrdotfun/ShadowWire)
 - [Alerith Game](https://alerith.com) *(coming soon)*
+- [Alerith X](https://x.com/PlayAlerith) *(coming soon)*
