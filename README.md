@@ -194,9 +194,9 @@ Open `Unity/` folder documentation to understand the integration points. Full ga
 
 ---
 
-## Demo
+## Demo Video
 
-[Video/Screenshots here]
+https://x.com/PlayAlerith/status/2018337290397810760
 
 ---
 
